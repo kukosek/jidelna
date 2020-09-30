@@ -1,3 +1,5 @@
+from typing import List
+
 from Store.userStore.user import User
 import json
 
@@ -25,7 +27,7 @@ class UserManager:
             );""")
         conn.commit()
 
-    def get_user_by_authid(self, authid):
+    def get_user_by_authid(self, authid: str) -> User:
         self.cur.execute(
             """SELECT * FROM users WHERE 
             authid = %(authid)s""",
@@ -41,14 +43,15 @@ class UserManager:
         else:
             return None
 
-    def get_autoorder_users(self):
+    def get_autoorder_users(self) -> List[User]:
         self.cur.execute(
             "SELECT * FROM " + self.table_name + " WHERE autoorder_enable = true")
         autoorder_users = self.cur.fetchall()
         for i in range(len(autoorder_users)):
             autoorder_users[i] = db_row_to_user(autoorder_users[i])
         return autoorder_users
-    def add_or_update_user(self, user):
+
+    def add_or_update_user(self, user: User):
         self.cur.execute("""SELECT * FROM """ + self.table_name + """ WHERE username = %(username)s""", {
             'username': user.username})
         query = self.cur.fetchall()
@@ -74,9 +77,11 @@ class UserManager:
             })
         else:
             # Add new user
-            self.cur.execute("""INSERT INTO """ + self.table_name + """ VALUES (DEFAULT, %(username)s, %(password)s, %(authid)s)""", {
-                "username": user.username,
-                "password": user.password,
-                "authid": user.authid
-            })
+            self.cur.execute(
+                """INSERT INTO """ + self.table_name + """ VALUES (DEFAULT, %(username)s, %(password)s, %(authid)s)""",
+                {
+                    "username": user.username,
+                    "password": user.password,
+                    "authid": user.authid
+                })
         self.conn.commit()

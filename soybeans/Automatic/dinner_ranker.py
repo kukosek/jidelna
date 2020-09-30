@@ -6,7 +6,7 @@ class DinnerRanker:
     def __init__(self, user_autoorder_settings):
         self.settings = user_autoorder_settings
 
-    def get_best_dinner_number(self, menu):
+    def get_best_dinner_number(self, menu) -> int:
         menu = copy.deepcopy(menu)  # Copy the object, so the rank-related attributes won't apply to the sended menu
         rank_result_number = None
         if "random" in self.settings:

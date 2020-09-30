@@ -27,12 +27,12 @@ import schedule
 conn = psycopg2.connect("dbname=jidelna user=jidelna host='localhost' password=jidelna")
 cur = conn.cursor()
 
-
 if __name__ == '__main__':
     distributor = BrowserWorkDistributor(1, cur)
     user_manager = UserManager(cur, conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
     schedule.every().day.at("07:40").do(autoorder_manager.do_automatic_orders)
+
 
 class JidelnaSuperstructureServer(object):
     def get_request_params(self):
