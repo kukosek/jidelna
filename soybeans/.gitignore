@@ -1,0 +1,5 @@
+*.log
+*.swp
+login.html
+__pycache__
+.idea
