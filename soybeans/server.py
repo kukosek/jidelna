@@ -138,7 +138,7 @@ class JidelnaSuperstructureServer(object):
 
                         if will_autoorder:
                             menu_num_to_order = DinnerRanker(
-                                json.loads(user.autoorder_settings)).get_best_dinner_number(
+                                user.autoorder_settings).get_best_dinner_number(
                                 daymenu["menus"])
                             for menu in daymenu["menus"]:
                                 if menu["menuNumber"] == menu_num_to_order:
