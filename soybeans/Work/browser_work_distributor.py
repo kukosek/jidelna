@@ -40,9 +40,9 @@ class BrowserWorkDistributor:
                 queue_sizes.append(len(worker.callQueue))
             target_worker = self.workers[queue_sizes.index(min(queue_sizes))]
         if insert_index == -1:
-            return self.workers[0].do_job(job)
+            return target_worker.do_job(job)
         else:
-            return self.workers[0].do_job(job, insert_index)
+            return target_worker.do_job(job, insert_index)
 
     def close_all(self):
         for worker in self.workers:
