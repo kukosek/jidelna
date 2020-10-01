@@ -10,6 +10,7 @@ def db_row_to_user(row):
 
 
 class UserManager:
+    # Class for communicating with database storage of users
     def __init__(self, cur, conn):
         self.conn = conn
         self.cur = cur
@@ -27,7 +28,8 @@ class UserManager:
             );""")
         conn.commit()
 
-    def get_user_by_authid(self, authid: str) -> User:
+    def get_user_by_authid(self, authid: str) -> User or None:
+        # Retrieves an user from database. Returns None if no such authid
         self.cur.execute(
             """SELECT * FROM users WHERE 
             authid = %(authid)s""",
@@ -44,6 +46,7 @@ class UserManager:
             return None
 
     def get_autoorder_users(self) -> List[User]:
+        # Returns a list of users that have autoordering enabled
         self.cur.execute(
             "SELECT * FROM " + self.table_name + " WHERE autoorder_enable = true")
         autoorder_users = self.cur.fetchall()
@@ -52,10 +55,13 @@ class UserManager:
         return autoorder_users
 
     def add_or_update_user(self, user: User):
+        # Saves the specified user to DB
+
+        # Check if user already exists
         self.cur.execute("""SELECT * FROM """ + self.table_name + """ WHERE username = %(username)s""", {
             'username': user.username})
         query = self.cur.fetchall()
-        if len(query) > 0:
+        if len(query) > 0:  # If user exists
             # Update user record
             existing_user = db_row_to_user(query[0])
             self.cur.execute("""UPDATE """ + self.table_name + """ 
@@ -75,7 +81,7 @@ class UserManager:
                 "autoorder_cancellation_dates": user.autoorder_cancellation_dates,
                 "id": existing_user.id
             })
-        else:
+        else:  # No such user
             # Add new user
             self.cur.execute(
                 """INSERT INTO """ + self.table_name + """ VALUES (DEFAULT, %(username)s, %(password)s, %(authid)s)""",

@@ -10,6 +10,10 @@ import threading
 
 
 class Worker:
+    # Worker is a thing you can assign tasks to.
+    # It consumes the information about what it should do from the class Job.
+    # If you want to assign a task to the worker, you must supply a Job to the function do_job
+    # It has a queue, so you can call it from more places parallel
     def __init__(self, cur):
         headless = True  # SET TO FALSE FOR DEBUGGING
 
@@ -18,13 +22,15 @@ class Worker:
             options.add_argument('-headless')
         self.cur = cur
         self.browser = webdriver.Firefox(options=options)
-        self.handler = jidelna_webapp_handler.Jidelna_webapp_handler(self.browser)
+        self.handler = jidelna_webapp_handler.JidelnaWebappHandler(self.browser)
         self.callQueue = []
         self.active = False
         self.loggedUser = None
         self.lastUsedTime = datetime.now()
 
     def __perform_queue_jobs(self):
+        # Runs in another thread
+        # Does all the taks (jobs) it has in the queue
         while len(self.callQueue) != 0:
             job = self.callQueue.pop(0)  # removes first job from array and returns it
 
@@ -77,8 +83,8 @@ class Worker:
                         job.result = daymenus
             except Exception as e:
                 job.result = e
-            # callback
-            job.evt.set()
+            # callback - send a signal that the job is finished.
+            job.evt.set()  # the .wait() in do_job ends now
         self.lastUsedTime = datetime.now()
         return
 
@@ -88,8 +94,10 @@ class Worker:
             self.callQueue.append(job)
         else:
             self.callQueue.insert(args[0], job)
-        # start thread calling queue jobs
+        # start thread calling queue jobs if its not running
         if not self.active:
             threading.Thread(target=self.__perform_queue_jobs).start()
         job.evt.wait()
+
+        # Can be an exception
         return job.result

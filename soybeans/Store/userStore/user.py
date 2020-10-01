@@ -1,6 +1,7 @@
 class User:
     def __init__(self, id, username, password, authid, autoorder_enable, autoorder_settings,
                  autoorder_cancellation_dates):
+        # Data class for storing info about a user
         self.id = id
         self.username = username
         self.password = password

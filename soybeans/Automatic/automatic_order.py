@@ -16,6 +16,7 @@ class AutomaticOrderManager:
         self.user_manager = user_manager
         self.distributor = distributor
 
+    # Automatically orders something for every user that has autoorder enabled and didn't already order something
     def do_automatic_orders(self):
         cherrypy.log("Starting autoorder")
         autoorder_users = self.user_manager.get_autoorder_users()
