@@ -99,12 +99,17 @@ class JidelnaSuperstructureServer(object):
             result = distributor.distribute(Job(Jobs.LOGIN, user))
             self.login_exception_check(result)
 
-            authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
-            user.authid = authid
+            possibly_existing_user = user_manager.get_user_by_username(request_params["username"])
+            if possibly_existing_user is not None:
+                user = possibly_existing_user
+                user.password = request_params["password"]
+            else:
+                authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
+                user.authid = authid
 
             user_manager.add_or_update_user(user)
 
-            cherrypy.response.cookie["authid"] = authid
+            cherrypy.response.cookie["authid"] = user.authid
             return "ok"
         else:
             raise cherrypy.HTTPError(status=400)
@@ -133,7 +138,7 @@ class JidelnaSuperstructureServer(object):
                                                  "%Y-%m-%d").date() in user.autoorder_cancellation_dates:
                                 will_autoorder = False
                         for menu in daymenu["menus"]:
-                            if menu["status"] == "ordered" or menu["status"] == "ordering":
+                            if menu["status"] == "ordered" or menu["status"] == "ordering" or menu["status"] == "ordered closed":
                                 will_autoorder = False
 
                         if will_autoorder:
@@ -164,7 +169,7 @@ class JidelnaSuperstructureServer(object):
                             something_is_ordered = True
                     if something_is_ordered:
                         result = distributor.distribute(
-                            Job(Jobs.CANCEL_ORDER, authid, order_date, request_params["menuNumber"]))
+                            Job(Jobs.CANCEL_ORDER, user, order_date, request_params["menuNumber"]))
                     else:
                         if user.autoorder_enable and order_date not in user.autoorder_cancellation_dates:
                             user.autoorder_cancellation_dates.append(order_date),

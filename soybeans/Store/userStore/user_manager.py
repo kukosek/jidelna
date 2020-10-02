@@ -6,6 +6,13 @@ import json
 
 def db_row_to_user(row):
     user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_cancellation_dates = row
+    if autoorder_settings is None:
+        autoorder_settings = {}
+    else:
+        autoorder_settings = json.loads(autoorder_settings)
+    autoorder_settings  = json.loads(autoorder_settings)
+    if autoorder_cancellation_dates is None:
+        autoorder_cancellation_dates = []
     return User(user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_cancellation_dates)
 
 
@@ -37,10 +44,19 @@ class UserManager:
         rows = self.cur.fetchall()
         if len(rows) > 0:
             user = db_row_to_user(rows[0])
-            if user.autoorder_settings is None:
-                user.autoorder_settings = {}
-            else:
-                user.autoorder_settings = json.loads(user.autoorder_settings)
+            return user
+        else:
+            return None
+        
+    def get_user_by_username(self, username: str) -> User or None:
+        # Retrieves an user from database. Returns None if no such authid
+        self.cur.execute(
+            """SELECT * FROM users WHERE 
+            username = %(username)s""",
+            {'username': username})
+        rows = self.cur.fetchall()
+        if len(rows) > 0:
+            user = db_row_to_user(rows[0])
             return user
         else:
             return None
@@ -77,7 +93,7 @@ class UserManager:
                 "password": user.password,
                 "authid": user.authid,
                 "autoorder_enable": user.autoorder_enable,
-                "autoorder_settings": user.autoorder_settings,
+                "autoorder_settings": json.dumps(user.autoorder_settings),
                 "autoorder_cancellation_dates": user.autoorder_cancellation_dates,
                 "id": existing_user.id
             })

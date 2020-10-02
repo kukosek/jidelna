@@ -62,13 +62,24 @@ class DayOrder:
                               "allergens": allergens})
             statusImageName = menuInfo[2].find_elements_by_tag_name("input")[0].get_attribute("src")
             if statusImageName == "http://5.104.18.31/jidelna/image/objst_order.jpg":
-                self.menu[-1]["status"] = "ordered"
+                if mDate == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0, second=0):
+                    self.menu[-1]["status"] = "ordered closed"
+                else:
+                    self.menu[-1]["status"] = "ordered"
             elif statusImageName == "http://5.104.18.31/jidelna/image/objst_order_request.jpg":
                 self.menu[-1]["status"] = "ordering"
             elif statusImageName == "http://5.104.18.31/jidelna/image/objst_del_request.jpg":
                 self.menu[-1]["status"] = "cancelling order"
             elif statusImageName == "http://5.104.18.31/jidelna/image/objst_no.jpg":
-                self.menu[-1]["status"] = "available"
+                if mDate == date.today() and datetime.now() > datetime.now().replace(hour=8, minute=0, second=0):
+                    self.menu[-1]["status"] = "unavailable"
+                else:
+                    self.menu[-1]["status"] = "available"
+            elif statusImageName == "http://5.104.18.31/jidelna/image/objst_inbourse.jpg":
+                if mDate == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0, second=0):
+                    self.menu[-1]["status"] = "unavailable"
+                else:
+                    self.menu[-1]["status"] = "available"
             else:
                 self.menu[-1]["status"] = "none"
 

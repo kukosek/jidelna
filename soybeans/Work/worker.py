@@ -15,7 +15,7 @@ class Worker:
     # If you want to assign a task to the worker, you must supply a Job to the function do_job
     # It has a queue, so you can call it from more places parallel
     def __init__(self, cur):
-        headless = True  # SET TO FALSE FOR DEBUGGING
+        headless = False  # SET TO FALSE FOR DEBUGGING
 
         options = webdriver.firefox.options.Options()
         if headless:
