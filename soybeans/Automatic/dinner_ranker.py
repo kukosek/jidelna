@@ -6,7 +6,6 @@ class DinnerRanker:
     # Initiate this with autoorder settings
     def __init__(self, user_autoorder_settings):
         self.settings = user_autoorder_settings
-
     # Then this guesses what dinner from the menu will the user like. Returns dinner number.
     def get_best_dinner_number(self, menu) -> int:
         menu = copy.deepcopy(menu)  # Copy the object, so the rank-related attributes won't apply to the sended menu

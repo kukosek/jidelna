@@ -10,7 +10,6 @@ def db_row_to_user(row):
         autoorder_settings = {}
     else:
         autoorder_settings = json.loads(autoorder_settings)
-    autoorder_settings  = json.loads(autoorder_settings)
     if autoorder_cancellation_dates is None:
         autoorder_cancellation_dates = []
     return User(user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_cancellation_dates)

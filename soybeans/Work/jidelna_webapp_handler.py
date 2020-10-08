@@ -1,5 +1,7 @@
 from datetime import datetime, date
 import locale
+from selenium.common.exceptions import StaleElementReferenceException
+
 
 locale.setlocale(locale.LC_TIME, "cs_CZ.UTF-8")
 
@@ -13,18 +15,29 @@ class DayOrder:
     def __init__(self, mDate, browser):
         self.mDate = mDate
         self.browser = browser
+
         if "Jídelníček" not in self.browser.page_source:
             raise Exception("Day order request object created without logged in")
 
         # Select the date by interacting with the weird month/date selector on the webapp
         monthFinded = False
         displayedOrderDate = None
+
+        def getDisplayedOrderDateElem():
+            return browser.find_element_by_id("clnBillDate").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
+                    "tr")[0].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("table")[
+                    0].find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("tr")[0].find_elements_by_tag_name(
+                    "td")[1]
+        def click_next_month():
+            self.browser.find_element_by_xpath("//a[@title='Přejít na další měsíc']").click()
+        def click_prev_month():
+            self.browser.find_element_by_xpath("//a[@title='Přejít na předchozí měsíc']").click()
         while not monthFinded:
-            displayedOrderDateElem = \
-            browser.find_element_by_id("clnBillDate").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
-                "tr")[0].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("table")[
-                0].find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("tr")[0].find_elements_by_tag_name(
-                "td")[1]
+            try:
+                displayedOrderDateElem = getDisplayedOrderDateElem()
+            except StaleElementReferenceException:
+                self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                displayedOrderDateElem = getDisplayedOrderDateElem()
             czech_months = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září",
                             "říjen", "listopad", "prosinec"]
             month, year = displayedOrderDateElem.text.split(' ')
@@ -36,12 +49,32 @@ class DayOrder:
                 monthFinded = True
             else:
                 if displayedOrderDate < mDate:
-                    self.browser.find_element_by_xpath("//a[@title='Přejít na další měsíc']").click()
+                    try:
+                        click_next_month()
+                    except StaleElementReferenceException:
+                        self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                        click_next_month()
                 else:
-                    self.browser.find_element_by_xpath("//a[@title='Přejít na předchozí měsíc']").click()
-        self.browser.find_element_by_xpath("//a[@title='" + datetime.strftime(mDate, "%d %B") + "']").click()
-        menu_table_elem = browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0]
+                    try:
+                        click_prev_month()
+                    except StaleElementReferenceException:
+                        self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                        click_prev_month()
+        def getDayClickable():
+            return self.browser.find_element_by_xpath("//a[@title='" + datetime.strftime(mDate, "%d %B") + "']")
+        try:
+            getDayClickable().click()
+        except StaleElementReferenceException:
+            self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+            getDayClickable()
 
+        def get_menu_table():
+            return browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0]
+        try:
+            menu_table_elem = get_menu_table()
+        except StaleElementReferenceException:
+            self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+            menu_table_elem = get_menu_table()
         self.menu = [] # This will be the list of dinners(dict)
 
         # For every menu(dinner) on the page, parse the allergens into a list of int,

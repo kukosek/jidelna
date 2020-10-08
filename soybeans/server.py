@@ -31,7 +31,7 @@ if __name__ == '__main__':
     distributor = BrowserWorkDistributor(1, cur)
     user_manager = UserManager(cur, conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
-    schedule.every().day.at("07:40").do(autoorder_manager.do_automatic_orders)
+    schedule.every().day.at("07:19:30").do(autoorder_manager.do_automatic_orders)
 
 
 class JidelnaSuperstructureServer(object):
@@ -204,7 +204,7 @@ class JidelnaSuperstructureServer(object):
                 for key, value in settings.items():
                     if key == "autoorder":
                         user.autoorder_enable = value["enable"]
-                        user.autoorder_settings = json.dumps(value["settings"])
+                        user.autoorder_settings = value["settings"]
 
                         user_manager.add_or_update_user(user)
                     else:

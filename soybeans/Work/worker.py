@@ -15,7 +15,7 @@ class Worker:
     # If you want to assign a task to the worker, you must supply a Job to the function do_job
     # It has a queue, so you can call it from more places parallel
     def __init__(self, cur):
-        headless = False  # SET TO FALSE FOR DEBUGGING
+        headless = True  # SET TO FALSE FOR DEBUGGING
 
         options = webdriver.firefox.options.Options()
         if headless:
@@ -47,7 +47,7 @@ class Worker:
                     self.loggedUser = None
                 else:
                     last_request_elapsed_seconds = (datetime.now() - self.lastUsedTime).total_seconds()
-                    if job.user != self.loggedUser or last_request_elapsed_seconds > 60.0:
+                    if self.loggedUser is None or job.user.username != self.loggedUser.username or last_request_elapsed_seconds > 60.0:
                         login_for_job()
                     if job.type == Jobs.SELECT_DATE:
                         self.handler.select_date(job.arguments[0])

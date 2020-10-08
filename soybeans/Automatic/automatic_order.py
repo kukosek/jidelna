@@ -25,7 +25,7 @@ class AutomaticOrderManager:
 
         if num_of_users > 0:
             for user in autoorder_users:
-                if user.cancellation_dates is None or date.today() not in user.cancellation_dates:
+                if user.autoorder_cancellation_dates is None or date.today() not in user.autoorder_cancellation_dates:
                     menu = self.distributor.distribute(Job(Jobs.GET_DAYMENU, user, date.today()))
                     if isinstance(menu, Exception):
                         if "Bad credentials" in str(menu):
@@ -43,11 +43,10 @@ class AutomaticOrderManager:
                             dinner_already_ordered = True
                             break
                     if not dinner_already_ordered:
-                        settings = json.loads(user.autoorder_settings)
+                        settings = user.autoorder_settings
                         menu_to_order = DinnerToOrder(None, date.today())
-                        if "random" in settings:
-                            if settings["random"]:
-                                menu_to_order.number = random.randint(1, len(menu))
+                        if "random" in settings and settings["random"]:
+                            menu_to_order.number = random.randint(1, len(menu))
                         else:
                             menu_to_order.number = DinnerRanker(settings).get_best_dinner_number(menu)
                         if menu_to_order.number is not None:
@@ -57,7 +56,7 @@ class AutomaticOrderManager:
                                 cherrypy.log.error("Autoorder error, user " + user.username + ": " + str(result))
                                 num_of_errors += 1
                 else:
-                    user.cancellation_dates.pop(user.cancellation_dates.indexOf(date.today()))
+                    user.autoorder_cancellation_dates.pop(user.autoorder_cancellation_dates.indexOf(date.today()))
                     self.user_manager.add_or_update_user(user)
         cherrypy.log(
             "Autoorder finished, fulfilled " + str(num_of_users - num_of_errors) + "/" + str(num_of_users) + " requests")
