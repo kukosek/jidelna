@@ -42,6 +42,7 @@ class DinnerRanker:
                 rank_result_number = dinners_by_rank[0]["menuNumber"]
             else:
                 for dinner in dinners_by_rank:
-                    if not dinner["allergic"]:
+                    if dinner["allergic"] is False:
                         rank_result_number = dinner["menuNumber"]
+                        break
         return rank_result_number

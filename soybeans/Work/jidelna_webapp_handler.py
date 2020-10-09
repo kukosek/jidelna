@@ -91,8 +91,14 @@ class DayOrder:
                     allergens.pop(i)
                 else:
                     allergens[i] = int(''.join(i for i in allergens[i].split('.')[0] if i.isdigit()))
-            self.menu.append({"type": menuInfo[3].text, "menuNumber": int(menuInfo[4].text), "name": menuInfo[5].text,
+            def append_dinner():
+                self.menu.append({"type": menuInfo[3].text, "menuNumber": int(menuInfo[4].text), "name": menuInfo[5].text,
                               "allergens": allergens})
+            try:
+                append_dinner()
+            except StaleElementReferenceException:
+                self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                append_dinner()
             statusImageName = menuInfo[2].find_elements_by_tag_name("input")[0].get_attribute("src")
             if statusImageName == "http://5.104.18.31/jidelna/image/objst_order.jpg":
                 if mDate == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0, second=0):
