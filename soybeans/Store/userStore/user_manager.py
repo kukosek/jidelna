@@ -46,7 +46,7 @@ class UserManager:
             return user
         else:
             return None
-        
+
     def get_user_by_username(self, username: str) -> User or None:
         # Retrieves an user from database. Returns None if no such authid
         self.cur.execute(
@@ -105,4 +105,10 @@ class UserManager:
                     "password": user.password,
                     "authid": user.authid
                 })
+        self.conn.commit()
+
+    def delete_user(self, user: User):
+        self.cur.execute(
+            "DELETE FROM " + self.table_name + " WHERE username = %(username)s",
+            {"username": user.username})
         self.conn.commit()

@@ -115,6 +115,19 @@ class JidelnaSuperstructureServer(object):
             raise cherrypy.HTTPError(status=400)
 
     @cherrypy.expose
+    def logout(self, **params):
+        authid = self.get_authid()
+        user = user_manager.get_user_by_authid(authid)
+        self.user_validity_check(user, authid)
+        cherrypy.response.cookie["authid"] = authid
+        cherrypy.response.cookie["authid"]["expires"] = 0
+        if "delete" in params:
+            if params["delete"] == "true":
+                user_manager.delete_user(user)
+                return "logged_out_and_deleted"
+        return "logged_out"
+
+    @cherrypy.expose
     def menu(self):
         authid = self.get_authid()
         user = user_manager.get_user_by_authid(authid)
