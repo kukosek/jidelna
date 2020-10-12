@@ -6,6 +6,7 @@ from Automatic.dinner_ranker import DinnerRanker
 from Work.browser_work_distributor import BrowserWorkDistributor
 from Work.job import Job
 from Work.jobs import Jobs
+from Work.exceptions import *
 from Automatic.automatic_order import AutomaticOrderManager
 from Store.userStore.user_manager import UserManager
 from Store.userStore.user import User
@@ -208,6 +209,9 @@ class JidelnaSuperstructureServer(object):
                     if isinstance(result, ValueError):
                         raise cherrypy.HTTPError(status=400, message="Menu number " + str(
                             request_params["menuNumber"]) + " not available")
+                    elif isinstance(result, DinnerOrderingClosedException):
+                        raise cherrypy.HTTPError(status=404, message="Menu number " + str(
+                            request_params["menuNumber"]) + " not available - ordering was closed.")
                     else:
                         cherrypy.log.error(
                             "/menu " + request_params["action"] + " request unknown exception:" + str(result))

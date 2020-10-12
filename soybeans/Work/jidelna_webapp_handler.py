@@ -1,8 +1,11 @@
 from datetime import datetime, date
 import locale
 from selenium.common.exceptions import StaleElementReferenceException
+from Work.exceptions import *
 
 locale.setlocale(locale.LC_TIME, "cs_CZ.UTF-8")
+
+jidelna_webroot = 'http://5.104.18.31/jidelna/'
 
 
 class DayOrder:
@@ -11,12 +14,12 @@ class DayOrder:
     # You can order() or cancel_order() a dinner
     # You must initiate it when the browser (Selenium.webdriver) is already logged into the cantry's webapp
     # mDate is the date of the menu you want to initialize
-    def __init__(self, mDate, browser):
-        self.mDate = mDate
+    def __init__(self, desired_date, browser):
+        self.mDate = desired_date
         self.browser = browser
 
         if "Jídelníček" not in self.browser.page_source:
-            raise Exception("Day order request object created without logged in")
+            raise BrowserNotLoggedInException("Day order request object created without logged in")
 
         # Select the date by interacting with the weird month/date selector on the webapp
         month_finded = False
@@ -41,7 +44,7 @@ class DayOrder:
             try:
                 displayed_order_date_elem = get_displayed_order_date_elem()
             except StaleElementReferenceException:
-                self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                self.browser.get('%sPersonDayPerOrderRequest.aspx' % jidelna_webroot)
                 displayed_order_date_elem = get_displayed_order_date_elem()
             czech_months = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září",
                             "říjen", "listopad", "prosinec"]
@@ -50,29 +53,29 @@ class DayOrder:
             year = int(year)
             displayed_order_date = date(year, month, 1)
 
-            if displayed_order_date.month == mDate.month:
+            if displayed_order_date.month == desired_date.month:
                 month_finded = True
             else:
-                if displayed_order_date < mDate:
+                if displayed_order_date < desired_date:
                     try:
                         click_next_month()
                     except StaleElementReferenceException:
-                        self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                        self.browser.get('%sPersonDayPerOrderRequest.aspx' % jidelna_webroot)
                         click_next_month()
                 else:
                     try:
                         click_prev_month()
                     except StaleElementReferenceException:
-                        self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                        self.browser.get('%sPersonDayPerOrderRequest.aspx' % jidelna_webroot)
                         click_prev_month()
 
         def get_day_clickable():
-            return self.browser.find_element_by_xpath("//a[@title='" + datetime.strftime(mDate, "%d %B") + "']")
+            return self.browser.find_element_by_xpath("//a[@title='" + datetime.strftime(desired_date, "%d %B") + "']")
 
         try:
             get_day_clickable().click()
         except StaleElementReferenceException:
-            self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+            self.browser.get('%sPersonDayPerOrderRequest.aspx' % jidelna_webroot)
             get_day_clickable()
 
         def get_menu_table():
@@ -81,7 +84,7 @@ class DayOrder:
         try:
             menu_table_elem = get_menu_table()
         except StaleElementReferenceException:
-            self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+            self.browser.get('%sPersonDayPerOrderRequest.aspx' % jidelna_webroot)
             menu_table_elem = get_menu_table()
         self.menu = []  # This will be the list of dinners(dict)
 
@@ -108,25 +111,27 @@ class DayOrder:
             try:
                 append_dinner()
             except StaleElementReferenceException:
-                self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
+                self.browser.get('%sPersonDayPerOrderRequest.aspx' % jidelna_webroot)
                 append_dinner()
             status_image_name = menu_info[2].find_elements_by_tag_name("input")[0].get_attribute("src")
-            if status_image_name == "http://5.104.18.31/jidelna/image/objst_order.jpg":
-                if mDate == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0, second=0):
+            if status_image_name == ("%simage/objst_order.jpg" % jidelna_webroot):
+                if desired_date == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0,
+                                                                                            second=0):
                     self.menu[-1]["status"] = "ordered closed"
                 else:
                     self.menu[-1]["status"] = "ordered"
-            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_order_request.jpg":
+            elif status_image_name == ("%simage/objst_order_request.jpg" % jidelna_webroot):
                 self.menu[-1]["status"] = "ordering"
-            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_del_request.jpg":
+            elif status_image_name == ("%simage/objst_del_request.jpg" % jidelna_webroot):
                 self.menu[-1]["status"] = "cancelling order"
-            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_no.jpg":
-                if mDate == date.today() and datetime.now() > datetime.now().replace(hour=8, minute=0, second=0):
+            elif status_image_name == ("%simage/objst_no.jpg" % jidelna_webroot):
+                if desired_date == date.today() and datetime.now() > datetime.now().replace(hour=8, minute=0, second=0):
                     self.menu[-1]["status"] = "unavailable"
                 else:
                     self.menu[-1]["status"] = "available"
-            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_inbourse.jpg":
-                if mDate == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0, second=0):
+            elif status_image_name == ("%simage/objst_inbourse.jpg" % jidelna_webroot):
+                if desired_date == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0,
+                                                                                            second=0):
                     self.menu[-1]["status"] = "unavailable"
                 else:
                     self.menu[-1]["status"] = "available"
@@ -146,6 +151,10 @@ class DayOrder:
             # Order the specified dinner
             self.browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
                 "tr")[menu_index + 1].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("input")[0].click()
+            if "Uzavřeno" in self.browser.page_source:
+                if "max" in self.browser.page_source:
+                    raise DinnerOrderingClosedException("Dinner sold out")
+                raise DinnerOrderingClosedException("Too late. Not accepting orders now")
 
     def cancel_order(self, menu_number):
 
@@ -160,6 +169,10 @@ class DayOrder:
             # Cancel the specified dinner
             self.browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
                 "tr")[menu_index + 1].find_elements_by_tag_name("td")[1].find_elements_by_tag_name("input")[0].click()
+            if "Uzavřeno" in self.browser.page_source:
+                if "max" in self.browser.page_source:
+                    raise DinnerOrderingClosedException("Dinner sold out")
+                raise DinnerOrderingClosedException("Too late. Not accepting orders now")
 
 
 class JidelnaWebappHandler:
@@ -175,7 +188,7 @@ class JidelnaWebappHandler:
                 self.logout()
             except Exception:
                 pass
-        self.browser.get('http://5.104.18.31/jidelna/jidelna.aspx')
+        self.browser.get('%sjidelna.aspx' % jidelna_webroot)
         self.browser.find_element_by_id('txbName').send_keys(username)
         self.browser.find_element_by_id('txbPWD').send_keys(password)
         self.browser.find_element_by_id('btnLogin').click()
@@ -184,10 +197,10 @@ class JidelnaWebappHandler:
             self.logged_in = True
         elif "Neplatné přihlášení" in self.browser.page_source or "Neplatné pøihlášení" in self.browser.page_source:
             self.logged_in = False
-            raise ValueError("Incorrect credentials")
+            raise IncorrectCredentialsException("Incorrect credentials")
         else:
             self.logged_in = False
-            raise Exception("Could not login")
+            raise LoginException("Could not login")
 
     def logout(self):
         self.browser.find_element_by_id('imbLogOff').click()
