@@ -19,15 +19,17 @@ class DayOrder:
             raise Exception("Day order request object created without logged in")
 
         # Select the date by interacting with the weird month/date selector on the webapp
-        monthFinded = False
-        displayedOrderDate = None
+        month_finded = False
+        displayed_order_date = None
 
-        def getDisplayedOrderDateElem():
+        def get_displayed_order_date_elem():
             return \
-            browser.find_element_by_id("clnBillDate").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
-                "tr")[0].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("table")[
-                0].find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("tr")[0].find_elements_by_tag_name(
-                "td")[1]
+                browser.find_element_by_id("clnBillDate").find_elements_by_tag_name("tbody")[
+                    0].find_elements_by_tag_name(
+                    "tr")[0].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("table")[
+                    0].find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("tr")[
+                    0].find_elements_by_tag_name(
+                    "td")[1]
 
         def click_next_month():
             self.browser.find_element_by_xpath("//a[@title='Přejít na další měsíc']").click()
@@ -35,23 +37,23 @@ class DayOrder:
         def click_prev_month():
             self.browser.find_element_by_xpath("//a[@title='Přejít na předchozí měsíc']").click()
 
-        while not monthFinded:
+        while not month_finded:
             try:
-                displayedOrderDateElem = getDisplayedOrderDateElem()
+                displayed_order_date_elem = get_displayed_order_date_elem()
             except StaleElementReferenceException:
                 self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
-                displayedOrderDateElem = getDisplayedOrderDateElem()
+                displayed_order_date_elem = get_displayed_order_date_elem()
             czech_months = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září",
                             "říjen", "listopad", "prosinec"]
-            month, year = displayedOrderDateElem.text.split(' ')
+            month, year = displayed_order_date_elem.text.split(' ')
             month = czech_months.index(month) + 1
             year = int(year)
-            displayedOrderDate = date(year, month, 1)
+            displayed_order_date = date(year, month, 1)
 
-            if displayedOrderDate.month == mDate.month:
-                monthFinded = True
+            if displayed_order_date.month == mDate.month:
+                month_finded = True
             else:
-                if displayedOrderDate < mDate:
+                if displayed_order_date < mDate:
                     try:
                         click_next_month()
                     except StaleElementReferenceException:
@@ -64,14 +66,14 @@ class DayOrder:
                         self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
                         click_prev_month()
 
-        def getDayClickable():
+        def get_day_clickable():
             return self.browser.find_element_by_xpath("//a[@title='" + datetime.strftime(mDate, "%d %B") + "']")
 
         try:
-            getDayClickable().click()
+            get_day_clickable().click()
         except StaleElementReferenceException:
             self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
-            getDayClickable()
+            get_day_clickable()
 
         def get_menu_table():
             return browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0]
@@ -87,8 +89,8 @@ class DayOrder:
         #   take the basic info about the dinner, determine the status by checking the image icon,
         #   create a dict with all this, and add to the dinner list (.menu)
         for menuElem in menu_table_elem.find_elements_by_tag_name("tr")[1:]:
-            menuInfo = menuElem.find_elements_by_tag_name("td")
-            allergens = menuInfo[6].text.split(',')
+            menu_info = menuElem.find_elements_by_tag_name("td")
+            allergens = menu_info[6].text.split(',')
             removed = 0
             for a in range(len(allergens)):
                 i = a - removed
@@ -100,7 +102,7 @@ class DayOrder:
 
             def append_dinner():
                 self.menu.append(
-                    {"type": menuInfo[3].text, "menuNumber": int(menuInfo[4].text), "name": menuInfo[5].text,
+                    {"type": menu_info[3].text, "menuNumber": int(menu_info[4].text), "name": menu_info[5].text,
                      "allergens": allergens})
 
             try:
@@ -108,22 +110,22 @@ class DayOrder:
             except StaleElementReferenceException:
                 self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
                 append_dinner()
-            statusImageName = menuInfo[2].find_elements_by_tag_name("input")[0].get_attribute("src")
-            if statusImageName == "http://5.104.18.31/jidelna/image/objst_order.jpg":
+            status_image_name = menu_info[2].find_elements_by_tag_name("input")[0].get_attribute("src")
+            if status_image_name == "http://5.104.18.31/jidelna/image/objst_order.jpg":
                 if mDate == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0, second=0):
                     self.menu[-1]["status"] = "ordered closed"
                 else:
                     self.menu[-1]["status"] = "ordered"
-            elif statusImageName == "http://5.104.18.31/jidelna/image/objst_order_request.jpg":
+            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_order_request.jpg":
                 self.menu[-1]["status"] = "ordering"
-            elif statusImageName == "http://5.104.18.31/jidelna/image/objst_del_request.jpg":
+            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_del_request.jpg":
                 self.menu[-1]["status"] = "cancelling order"
-            elif statusImageName == "http://5.104.18.31/jidelna/image/objst_no.jpg":
+            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_no.jpg":
                 if mDate == date.today() and datetime.now() > datetime.now().replace(hour=8, minute=0, second=0):
                     self.menu[-1]["status"] = "unavailable"
                 else:
                     self.menu[-1]["status"] = "available"
-            elif statusImageName == "http://5.104.18.31/jidelna/image/objst_inbourse.jpg":
+            elif status_image_name == "http://5.104.18.31/jidelna/image/objst_inbourse.jpg":
                 if mDate == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0, second=0):
                     self.menu[-1]["status"] = "unavailable"
                 else:
@@ -131,33 +133,33 @@ class DayOrder:
             else:
                 self.menu[-1]["status"] = "none"
 
-    def order(self, menuNumber):
+    def order(self, menu_number):
 
         # Find the position (index) of dinner with specified menu number
-        menuIndex = None
+        menu_index = None
         for i in range(len(self.menu)):
-            if int(self.menu[i]["menuNumber"]) == menuNumber:
-                menuIndex = i
-        if menuIndex == None:
-            raise ValueError("Menu " + menuNumber + " not available")
+            if int(self.menu[i]["menuNumber"]) == menu_number:
+                menu_index = i
+        if menu_index is None:
+            raise ValueError("Menu " + menu_number + " not available")
         else:
             # Order the specified dinner
             self.browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
-                "tr")[menuIndex + 1].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("input")[0].click()
+                "tr")[menu_index + 1].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("input")[0].click()
 
-    def cancel_order(self, menuNumber):
+    def cancel_order(self, menu_number):
 
         # Find the position (index) of dinner with specified menu number
-        menuIndex = None
+        menu_index = None
         for i in range(len(self.menu)):
-            if int(self.menu[i]["menuNumber"]) == menuNumber:
-                menuIndex = i
-        if menuIndex == None:
-            raise ValueError("Menu " + menuNumber + " not available")
+            if int(self.menu[i]["menuNumber"]) == menu_number:
+                menu_index = i
+        if menu_index is None:
+            raise ValueError("Menu " + menu_number + " not available")
         else:
             # Cancel the specified dinner
             self.browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
-                "tr")[menuIndex + 1].find_elements_by_tag_name("td")[1].find_elements_by_tag_name("input")[0].click()
+                "tr")[menu_index + 1].find_elements_by_tag_name("td")[1].find_elements_by_tag_name("input")[0].click()
 
 
 class JidelnaWebappHandler:
@@ -191,14 +193,14 @@ class JidelnaWebappHandler:
         self.browser.find_element_by_id('imbLogOff').click()
         self.logged_in = False
 
-    def select_date(self, mDate):
-        self.dayorder = DayOrder(mDate, self.browser)
+    def select_date(self, desired_date):
+        self.dayorder = DayOrder(desired_date, self.browser)
 
     def get_menu(self):
         return self.dayorder.menu
 
-    def order_menu(self, menuNumber):
-        self.dayorder.order(menuNumber)
+    def order_menu(self, menu_number):
+        self.dayorder.order(menu_number)
 
-    def cancel_order(self, menuNumber):
-        self.dayorder.cancel_order(menuNumber)
+    def cancel_order(self, menu_number):
+        self.dayorder.cancel_order(menu_number)
