@@ -2,7 +2,6 @@ from datetime import datetime, date
 import locale
 from selenium.common.exceptions import StaleElementReferenceException
 
-
 locale.setlocale(locale.LC_TIME, "cs_CZ.UTF-8")
 
 
@@ -24,14 +23,18 @@ class DayOrder:
         displayedOrderDate = None
 
         def getDisplayedOrderDateElem():
-            return browser.find_element_by_id("clnBillDate").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
-                    "tr")[0].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("table")[
-                    0].find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("tr")[0].find_elements_by_tag_name(
-                    "td")[1]
+            return \
+            browser.find_element_by_id("clnBillDate").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
+                "tr")[0].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("table")[
+                0].find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("tr")[0].find_elements_by_tag_name(
+                "td")[1]
+
         def click_next_month():
             self.browser.find_element_by_xpath("//a[@title='Přejít na další měsíc']").click()
+
         def click_prev_month():
             self.browser.find_element_by_xpath("//a[@title='Přejít na předchozí měsíc']").click()
+
         while not monthFinded:
             try:
                 displayedOrderDateElem = getDisplayedOrderDateElem()
@@ -60,8 +63,10 @@ class DayOrder:
                     except StaleElementReferenceException:
                         self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
                         click_prev_month()
+
         def getDayClickable():
             return self.browser.find_element_by_xpath("//a[@title='" + datetime.strftime(mDate, "%d %B") + "']")
+
         try:
             getDayClickable().click()
         except StaleElementReferenceException:
@@ -70,12 +75,13 @@ class DayOrder:
 
         def get_menu_table():
             return browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0]
+
         try:
             menu_table_elem = get_menu_table()
         except StaleElementReferenceException:
             self.browser.get('http://5.104.18.31/jidelna/PersonDayPerOrderRequest.aspx')
             menu_table_elem = get_menu_table()
-        self.menu = [] # This will be the list of dinners(dict)
+        self.menu = []  # This will be the list of dinners(dict)
 
         # For every menu(dinner) on the page, parse the allergens into a list of int,
         #   take the basic info about the dinner, determine the status by checking the image icon,
@@ -91,9 +97,12 @@ class DayOrder:
                     allergens.pop(i)
                 else:
                     allergens[i] = int(''.join(i for i in allergens[i].split('.')[0] if i.isdigit()))
+
             def append_dinner():
-                self.menu.append({"type": menuInfo[3].text, "menuNumber": int(menuInfo[4].text), "name": menuInfo[5].text,
-                              "allergens": allergens})
+                self.menu.append(
+                    {"type": menuInfo[3].text, "menuNumber": int(menuInfo[4].text), "name": menuInfo[5].text,
+                     "allergens": allergens})
+
             try:
                 append_dinner()
             except StaleElementReferenceException:

@@ -31,7 +31,7 @@ if __name__ == '__main__':
     distributor = BrowserWorkDistributor(1, cur)
     user_manager = UserManager(cur, conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
-    schedule.every().day.at("07:19:30").do(autoorder_manager.do_automatic_orders)
+    schedule.every().day.at("07:15:30").do(autoorder_manager.do_automatic_orders)
 
 
 class JidelnaSuperstructureServer(object):
@@ -128,14 +128,24 @@ class JidelnaSuperstructureServer(object):
         return "logged_out"
 
     @cherrypy.expose
-    def menu(self):
+    def menu(self, **params):
         authid = self.get_authid()
         user = user_manager.get_user_by_authid(authid)
         self.user_validity_check(user, authid)
 
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
-            daymenus = distributor.distribute(Job(Jobs.GET_MENU, user))
+            desired_date = None
+            if "date" in params:
+                try:
+                    desired_date = datetime.strptime(params["date"],
+                                                     "%Y-%m-%d").date()
+                except Exception:
+                    raise cherrypy.HTTPError(status=400, message="Bad date format")
+            if desired_date is None:
+                daymenus = distributor.distribute(Job(Jobs.GET_MENU, user))
+            else:
+                daymenus = distributor.distribute(Job(Jobs.GET_DAYMENU, user, desired_date))
             if isinstance(daymenus, Exception):
                 self.login_exception_check(daymenus)
                 cherrypy.log.error("/menu unknown exception:" + str(daymenus))
@@ -144,7 +154,7 @@ class JidelnaSuperstructureServer(object):
             else:
 
                 if user.autoorder_enable:
-                    for daymenu in daymenus:
+                    def daymenu_correction(daymenu):
                         will_autoorder = True
                         if user.autoorder_cancellation_dates is not None:
                             if datetime.strptime(daymenu["date"],
@@ -161,6 +171,11 @@ class JidelnaSuperstructureServer(object):
                             for menu in daymenu["menus"]:
                                 if menu["menuNumber"] == menu_num_to_order:
                                     menu["status"] = "autoordered"
+                    if isinstance(daymenus, list):
+                        for daymenu in daymenus:
+                            daymenu_correction(daymenu)
+                    else:
+                        daymenu_correction(daymenus)
                 return json.dumps(daymenus).encode('utf8')
         elif cherrypy.request.method == "POST":
             request_params = self.get_request_params()
@@ -176,6 +191,7 @@ class JidelnaSuperstructureServer(object):
                     if isinstance(menus_cancel_day, Exception):
                         self.login_exception_check(menus_cancel_day)
                         raise cherrypy.HTTPError(status=500)
+                    menus_cancel_day = menus_cancel_day["menus"]
                     something_is_ordered = False
                     for dinner in menus_cancel_day:
                         if dinner["status"] != "available" and dinner["status"] != "cancelling":

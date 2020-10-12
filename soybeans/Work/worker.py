@@ -58,8 +58,9 @@ class Worker:
                         self.handler.select_date(job.arguments[0])
                         self.handler.cancel_order(job.arguments[1])
                     elif job.type == Jobs.GET_DAYMENU:
-                        self.handler.select_date(job.arguments[0])
-                        job.result = self.handler.get_menu()
+                        desired_date = job.arguments[0]
+                        self.handler.select_date(desired_date)
+                        job.result = {"date": desired_date.isoformat(), "menus": self.handler.get_menu()}
                     elif job.type == Jobs.GET_MENU:
                         daymenus = []
                         day_menu_available = True

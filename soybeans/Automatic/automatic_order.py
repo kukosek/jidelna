@@ -34,6 +34,7 @@ class AutomaticOrderManager:
                         else:
                             cherrypy.log.error("Couldn't get today's menu for auto ordering. Error: " + str(menu))
                             break
+                    menu = menu["menus"]
                     if len(menu) == 0:
                         cherrypy.log("Autoorder: no menu for today")
                         break
