@@ -5,3 +5,4 @@ login.html
 __pycache__
 .idea
 *.conf
+*.sh
