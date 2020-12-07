@@ -10,6 +10,7 @@ from Work.exceptions import *
 from Automatic.automatic_order import AutomaticOrderManager
 from Store.userStore.user_manager import UserManager
 from Store.userStore.user import User
+from Security.login_guard import LoginGuard
 
 import psycopg2
 
@@ -31,11 +32,22 @@ cur = conn.cursor()
 if __name__ == '__main__':
     distributor = BrowserWorkDistributor(1, cur)
     user_manager = UserManager(cur, conn)
+    login_guard = LoginGuard(cur, conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
     schedule.every().day.at("06:19").do(autoorder_manager.do_automatic_orders)
 
 
 class JidelnaSuperstructureServer(object):
+    def get_request_origin_ip(self):
+        raddr = cherrypy.request.headers["Remote-Addr"]
+        if "127.0.0.1" in raddr:
+            if "X-Forwarded-For" in cherrypy.request.headers:
+                return cherrypy.request.headers["X-Forwarded-For"]
+            else:
+                raise cherrypy.HTTPError(status=500, message="Could not identify your IP.")
+        else:
+            return raddr
+
     def get_request_params(self):
         try:
             return json.loads(cherrypy.request.body.read(int(cherrypy.request.headers['Content-Length'])))
@@ -48,9 +60,12 @@ class JidelnaSuperstructureServer(object):
                 cherrypy.log.error("/login Login probe doesn't work, cant reach dayorder")
                 raise cherrypy.HTTPError(status=502, message="Jidelna login probe doesn't work, cant reach dayorder.")
             elif "Incorrect credentials" in str(possible_exception):
+                login_guard.notify_login_failed(self.get_request_origin_ip())
                 raise cherrypy.HTTPError(status=401, message="Incorrect credentials")
             elif "Reached error page: about:neterror" in str(possible_exception):
                 raise cherrypy.HTTPError(status=504, message="Jidelna server unreachable")
+        else:
+            login_guard.notify_login_success(self.get_request_origin_ip())
 
     def user_validity_check(self, user, authid):
         if user is None:
@@ -71,47 +86,50 @@ class JidelnaSuperstructureServer(object):
     @cherrypy.expose
     def login(self):
         if cherrypy.request.method == "POST":
-            if "authid" in cherrypy.request.cookie:
-                authid = self.get_authid()
-                user = user_manager.get_user_by_authid(authid)
-                self.user_validity_check(user, authid)
+            if not login_guard.is_ip_malicious(self.get_request_origin_ip()):
+                if "authid" in cherrypy.request.cookie:
+                    authid = self.get_authid()
+                    user = user_manager.get_user_by_authid(authid)
+                    self.user_validity_check(user, authid)
 
-                result = distributor.distribute(Job(Jobs.LOGIN, user))
-                if isinstance(result, Exception):
-                    if "Could not login" in str(result):
-                        cherrypy.log.error("/login Login probe doesn't work, cant reach dayorder")
-                        raise cherrypy.HTTPError(status=502,
-                                                 message="Jidelna login probe doesn't work, cant reach dayorder.")
-                    elif "Reached error page: about:neterror" in str(result):
-                        cherrypy.log.error("/login Reached error page: about:neterror")
-                        raise cherrypy.HTTPError(status=504, message="Jidelna server unreachable")
+                    result = distributor.distribute(Job(Jobs.LOGIN, user))
+                    if isinstance(result, Exception):
+                        if "Could not login" in str(result):
+                            cherrypy.log.error("/login Login probe doesn't work, cant reach dayorder")
+                            raise cherrypy.HTTPError(status=502,
+                                                     message="Jidelna login probe doesn't work, cant reach dayorder.")
+                        elif "Reached error page: about:neterror" in str(result):
+                            cherrypy.log.error("/login Reached error page: about:neterror")
+                            raise cherrypy.HTTPError(status=504, message="Jidelna server unreachable")
+                        else:
+                            cherrypy.log.error("/login Unknown exception:\n" + str(result))
+                            cherrypy.log.error(traceback.print_tb(result.__traceback__))
+                            raise cherrypy.HTTPError(status=500)
                     else:
-                        cherrypy.log.error("/login Unknown exception:\n" + str(result))
-                        cherrypy.log.error(traceback.print_tb(result.__traceback__))
-                        raise cherrypy.HTTPError(status=500)
+                        return "ok"
+                request_params = self.get_request_params()
+                if "username" not in request_params or "password" not in request_params:
+                    raise cherrypy.HTTPError(status=400,
+                                             message="Bad request: you must specify username and password in request body as json")
+                user = User(None, request_params["username"], request_params["password"], None,
+                            None, None, None, None, None)
+                result = distributor.distribute(Job(Jobs.LOGIN, user))
+                self.login_exception_check(result)
+
+                possibly_existing_user = user_manager.get_user_by_username(request_params["username"])
+                if possibly_existing_user is not None:
+                    user = possibly_existing_user
+                    user.password = request_params["password"]
                 else:
-                    return "ok"
-            request_params = self.get_request_params()
-            if "username" not in request_params or "password" not in request_params:
-                raise cherrypy.HTTPError(status=400,
-                                         message="Bad request: you must specify username and password in request body as json")
-            user = User(None, request_params["username"], request_params["password"], None,
-                        None, None, None, None, None)
-            result = distributor.distribute(Job(Jobs.LOGIN, user))
-            self.login_exception_check(result)
+                    authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
+                    user.authid = authid
 
-            possibly_existing_user = user_manager.get_user_by_username(request_params["username"])
-            if possibly_existing_user is not None:
-                user = possibly_existing_user
-                user.password = request_params["password"]
+                user_manager.add_or_update_user(user)
+
+                cherrypy.response.cookie["authid"] = user.authid
+                return "ok"
             else:
-                authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
-                user.authid = authid
-
-            user_manager.add_or_update_user(user)
-
-            cherrypy.response.cookie["authid"] = user.authid
-            return "ok"
+                raise cherrypy.HTTPError(status=403, message="you messed up. contact me")
         else:
             raise cherrypy.HTTPError(status=400)
 
@@ -174,6 +192,7 @@ class JidelnaSuperstructureServer(object):
                             for menu in daymenu_to_correct.menus:
                                 if menu.menu_number == menu_num_to_order:
                                     menu.status = "autoordered"
+
                     if isinstance(daymenus, list):
                         for daymenu in daymenus:
                             daymenu_correction(daymenu)
@@ -291,11 +310,12 @@ if __name__ == '__main__':
             cur.close()
             conn.close()
             logging.info("PostgreSQL connection is closed")
-        distributor.close_all() #test
+        distributor.close_all()  # test
+
 
     thread_controller = ThreadController(cherrypy.engine)
     thread_controller.subscribe()
-    
+
     config = None
     try:
         with open("server.conf", 'r') as file:
