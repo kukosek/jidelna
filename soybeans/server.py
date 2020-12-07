@@ -291,7 +291,7 @@ if __name__ == '__main__':
             cur.close()
             conn.close()
             logging.info("PostgreSQL connection is closed")
-
+        distributor.close_all()
 
     thread_controller = ThreadController(cherrypy.engine)
     thread_controller.subscribe()
