@@ -37,7 +37,8 @@ class UserManager:
                 autoorder_enable boolean,
                 autoorder_settings varchar,
                 autoorder_request_settings varchar,
-                autoorder_cancellation_dates date[]
+                autoorder_cancellation_dates date[],
+                register_datetime timestamp
             );""")
         conn.commit()
 
