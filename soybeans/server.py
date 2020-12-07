@@ -32,7 +32,7 @@ if __name__ == '__main__':
     distributor = BrowserWorkDistributor(1, cur)
     user_manager = UserManager(cur, conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
-    schedule.every().day.at("07:15:30").do(autoorder_manager.do_automatic_orders)
+    schedule.every().day.at("06:19").do(autoorder_manager.do_automatic_orders)
 
 
 class JidelnaSuperstructureServer(object):
@@ -66,7 +66,7 @@ class JidelnaSuperstructureServer(object):
 
     @cherrypy.expose
     def index(self):
-        return open("login.html", "r").read()
+        return open("index.html", "r").read()
 
     @cherrypy.expose
     def login(self):
@@ -96,7 +96,7 @@ class JidelnaSuperstructureServer(object):
                 raise cherrypy.HTTPError(status=400,
                                          message="Bad request: you must specify username and password in request body as json")
             user = User(None, request_params["username"], request_params["password"], None,
-                        None, None, None)
+                        None, None, None, None, None)
             result = distributor.distribute(Job(Jobs.LOGIN, user))
             self.login_exception_check(result)
 
@@ -153,31 +153,40 @@ class JidelnaSuperstructureServer(object):
                 cherrypy.log.error(traceback.print_tb(daymenus.__traceback__))
                 raise cherrypy.HTTPError(status=500)
             else:
-
                 if user.autoorder_enable:
-                    def daymenu_correction(daymenu):
+                    def daymenu_correction(daymenu_to_correct):
                         will_autoorder = True
                         if user.autoorder_cancellation_dates is not None:
-                            if datetime.strptime(daymenu["date"],
-                                                 "%Y-%m-%d").date() in user.autoorder_cancellation_dates:
+                            if daymenu_to_correct.date in user.autoorder_cancellation_dates:
                                 will_autoorder = False
-                        for menu in daymenu["menus"]:
-                            if menu["status"] == "ordered" or menu["status"] == "ordering" or menu["status"] == "ordered closed":
+                        unavailable_menus = 0
+                        for menu in daymenu_to_correct.menus:
+                            if menu.status == "ordered" or menu.status == "ordering" or menu.status == "ordered closed":
                                 will_autoorder = False
-
+                            elif menu.status == "unavailable":
+                                unavailable_menus += 1
+                        if len(daymenu_to_correct.menus) == unavailable_menus:
+                            will_autoorder = False
                         if will_autoorder:
                             menu_num_to_order = DinnerRanker(
                                 user.autoorder_settings).get_best_dinner_number(
-                                daymenu["menus"])
-                            for menu in daymenu["menus"]:
-                                if menu["menuNumber"] == menu_num_to_order:
-                                    menu["status"] = "autoordered"
+                                daymenu_to_correct.menus)
+                            for menu in daymenu_to_correct.menus:
+                                if menu.menu_number == menu_num_to_order:
+                                    menu.status = "autoordered"
                     if isinstance(daymenus, list):
                         for daymenu in daymenus:
                             daymenu_correction(daymenu)
                     else:
                         daymenu_correction(daymenus)
-                return json.dumps(daymenus).encode('utf8')
+                if desired_date is None:
+                    daymenus_dict = daymenus
+                    for i in range(len(daymenus_dict)):
+                        daymenus_dict[i] = daymenus_dict[i].to_dict()
+                        daymenus_dict[i]["date"] = daymenus_dict[i]["date"].isoformat()
+                    return json.dumps(daymenus_dict).encode('utf8')
+                else:
+                    return daymenus.to_string().encode('utf8')
         elif cherrypy.request.method == "POST":
             request_params = self.get_request_params()
             try:
@@ -187,15 +196,18 @@ class JidelnaSuperstructureServer(object):
                 if action == "order":
                     result = distributor.distribute(
                         Job(Jobs.ORDER_MENU, user, order_date, request_params["menuNumber"]))
+                    if order_date in user.autoorder_cancellation_dates:
+                        user.autoorder_cancellation_dates.remove(order_date)
+                        user_manager.add_or_update_user(user)
                 elif action == "cancel":
                     menus_cancel_day = distributor.distribute(Job(Jobs.GET_DAYMENU, user, order_date))
                     if isinstance(menus_cancel_day, Exception):
                         self.login_exception_check(menus_cancel_day)
                         raise cherrypy.HTTPError(status=500)
-                    menus_cancel_day = menus_cancel_day["menus"]
+                    menus_cancel_day = menus_cancel_day.menus
                     something_is_ordered = False
                     for dinner in menus_cancel_day:
-                        if dinner["status"] != "available" and dinner["status"] != "cancelling":
+                        if dinner.status != "available" and dinner.status != "cancelling":
                             something_is_ordered = True
                     if something_is_ordered:
                         result = distributor.distribute(
@@ -229,7 +241,8 @@ class JidelnaSuperstructureServer(object):
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
 
-            user_settings = {"autoorder": {"enable": user.autoorder_enable, "settings": user.autoorder_settings}}
+            user_settings = {"autoorder": {"enable": user.autoorder_enable, "settings": user.autoorder_settings,
+                                           "requestSettings": user.autoorder_request_settings}}
             return json.dumps(user_settings).encode('utf8')
         elif cherrypy.request.method == "POST":
             settings = self.get_request_params()
@@ -238,7 +251,7 @@ class JidelnaSuperstructureServer(object):
                     if key == "autoorder":
                         user.autoorder_enable = value["enable"]
                         user.autoorder_settings = value["settings"]
-
+                        user.autoorder_request_settings = value["requestSettings"]
                         user_manager.add_or_update_user(user)
                     else:
                         raise cherrypy.HTTPError(status=400, message="Unknown setting: " + key)
@@ -282,14 +295,17 @@ if __name__ == '__main__':
 
     thread_controller = ThreadController(cherrypy.engine)
     thread_controller.subscribe()
+    
+    config = None
     try:
-        cherrypy.config.update({
-            'server.socket_host': '10.143.201.147',
-            'server.socket_port': 8080,
-            'log.screen': True,
-            'log.access_file': 'access.log',
-            'log.error_file': 'server.log',
-            'request.show_tracebacks': False})
+        with open("server.conf", 'r') as file:
+            config = json.loads(file.read().replace("'", "\""))
+    except Exception as e:
+        print("Could not open server config file server.conf")
+        print(str(e))
+        finish()
+    try:
+        cherrypy.config.update(config)
         cherrypy.quickstart(JidelnaSuperstructureServer())
     except Exception:
         finish()

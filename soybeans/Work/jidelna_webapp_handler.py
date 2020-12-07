@@ -2,6 +2,7 @@ from datetime import datetime, date
 import locale
 from selenium.common.exceptions import StaleElementReferenceException
 from Work.exceptions import *
+from Work.orderable_dinner import OrderableDinner
 
 locale.setlocale(locale.LC_TIME, "cs_CZ.UTF-8")
 
@@ -105,8 +106,14 @@ class DayOrder:
 
             def append_dinner():
                 self.menu.append(
-                    {"type": menu_info[3].text, "menuNumber": int(menu_info[4].text), "name": menu_info[5].text,
-                     "allergens": allergens})
+                    OrderableDinner(
+                        dinner_type=menu_info[3].text,
+                        menu_number= int(menu_info[4].text),
+                        name=menu_info[5].text,
+                        allergens=allergens
+                    )
+                )
+
 
             try:
                 append_dinner()
@@ -117,33 +124,33 @@ class DayOrder:
             if status_image_name == ("%simage/objst_order.jpg" % jidelna_webroot):
                 if desired_date == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0,
                                                                                             second=0):
-                    self.menu[-1]["status"] = "ordered closed"
+                    self.menu[-1].status = "ordered closed"
                 else:
-                    self.menu[-1]["status"] = "ordered"
+                    self.menu[-1].status = "ordered"
             elif status_image_name == ("%simage/objst_order_request.jpg" % jidelna_webroot):
-                self.menu[-1]["status"] = "ordering"
+                self.menu[-1].status = "ordering"
             elif status_image_name == ("%simage/objst_del_request.jpg" % jidelna_webroot):
-                self.menu[-1]["status"] = "cancelling order"
+                self.menu[-1].status = "cancelling order"
             elif status_image_name == ("%simage/objst_no.jpg" % jidelna_webroot):
                 if desired_date == date.today() and datetime.now() > datetime.now().replace(hour=8, minute=0, second=0):
-                    self.menu[-1]["status"] = "unavailable"
+                    self.menu[-1].status = "unavailable"
                 else:
-                    self.menu[-1]["status"] = "available"
+                    self.menu[-1].status = "available"
             elif status_image_name == ("%simage/objst_inbourse.jpg" % jidelna_webroot):
                 if desired_date == date.today() and datetime.now() > datetime.now().replace(hour=14, minute=0,
                                                                                             second=0):
-                    self.menu[-1]["status"] = "unavailable"
+                    self.menu[-1].status = "unavailable"
                 else:
-                    self.menu[-1]["status"] = "available"
+                    self.menu[-1].status = "available"
             else:
-                self.menu[-1]["status"] = "none"
+                self.menu[-1].status = "none"
 
     def order(self, menu_number):
 
         # Find the position (index) of dinner with specified menu number
         menu_index = None
         for i in range(len(self.menu)):
-            if int(self.menu[i]["menuNumber"]) == menu_number:
+            if int(self.menu[i].menu_number) == menu_number:
                 menu_index = i
         if menu_index is None:
             raise ValueError("Menu " + menu_number + " not available")
@@ -161,7 +168,7 @@ class DayOrder:
         # Find the position (index) of dinner with specified menu number
         menu_index = None
         for i in range(len(self.menu)):
-            if int(self.menu[i]["menuNumber"]) == menu_number:
+            if int(self.menu[i].menu_number) == menu_number:
                 menu_index = i
         if menu_index is None:
             raise ValueError("Menu " + menu_number + " not available")
@@ -188,11 +195,15 @@ class JidelnaWebappHandler:
                 self.logout()
             except Exception:
                 pass
-        self.browser.get('%sjidelna.aspx' % jidelna_webroot)
-        self.browser.find_element_by_id('txbName').send_keys(username)
-        self.browser.find_element_by_id('txbPWD').send_keys(password)
-        self.browser.find_element_by_id('btnLogin').click()
-
+        def login_basic():
+            self.browser.get('%sjidelna.aspx' % jidelna_webroot)
+            self.browser.find_element_by_id('txbName').send_keys(username)
+            self.browser.find_element_by_id('txbPWD').send_keys(password)
+            self.browser.find_element_by_id('btnLogin').click()
+        try:
+            login_basic()
+        except StaleElementReferenceException:
+            login_basic()
         if "Jídelníček" in self.browser.page_source:
             self.logged_in = True
         elif "Neplatné přihlášení" in self.browser.page_source or "Neplatné pøihlášení" in self.browser.page_source:

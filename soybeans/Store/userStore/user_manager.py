@@ -3,21 +3,27 @@ from typing import List
 from Store.userStore.user import User
 import json
 
+from datetime import datetime
 
 def db_row_to_user(row):
-    user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_cancellation_dates = row
+    user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_request_settings, autoorder_cancellation_dates, register_datetime = row
     if autoorder_settings is None:
         autoorder_settings = {}
     else:
         autoorder_settings = json.loads(autoorder_settings)
     if autoorder_cancellation_dates is None:
         autoorder_cancellation_dates = []
-    return User(user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_cancellation_dates)
+    if autoorder_request_settings is None:
+        autoorder_request_settings = {}
+    else:
+        autoorder_request_settings = json.loads(autoorder_request_settings)
+    return User(user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_request_settings, autoorder_cancellation_dates, register_datetime)
 
 
 class UserManager:
     # Class for communicating with database storage of users
     def __init__(self, cur, conn):
+        self.register_datetime_format = "%Y-%m-%d %H:%M:%S"
         self.conn = conn
         self.cur = cur
         self.table_name = "users"
@@ -30,6 +36,7 @@ class UserManager:
                 authid varchar,
                 autoorder_enable boolean,
                 autoorder_settings varchar,
+                autoorder_request_settings varchar,
                 autoorder_cancellation_dates date[]
             );""")
         conn.commit()
@@ -85,7 +92,9 @@ class UserManager:
                                     authid = %(authid)s,
                                     autoorder_enable = %(autoorder_enable)s,
                                     autoorder_settings = %(autoorder_settings)s,
-                                    autoorder_cancellation_dates = %(autoorder_cancellation_dates)s
+                                    autoorder_request_settings = %(autoorder_request_settings)s,
+                                    autoorder_cancellation_dates = %(autoorder_cancellation_dates)s,
+                                    register_datetime = %(register_datetime)s
                                 WHERE id = %(id)s
                                 """, {
                 "username": user.username,
@@ -93,17 +102,20 @@ class UserManager:
                 "authid": user.authid,
                 "autoorder_enable": user.autoorder_enable,
                 "autoorder_settings": json.dumps(user.autoorder_settings),
+                "autoorder_request_settings": json.dumps(user.autoorder_request_settings),
                 "autoorder_cancellation_dates": user.autoorder_cancellation_dates,
-                "id": existing_user.id
+                "id": existing_user.id,
+                "register_datetime": user.register_datetime
             })
         else:  # No such user
             # Add new user
             self.cur.execute(
-                """INSERT INTO """ + self.table_name + """ VALUES (DEFAULT, %(username)s, %(password)s, %(authid)s)""",
+                """INSERT INTO """ + self.table_name + """ (id, username, password, authid, register_datetime) VALUES (DEFAULT, %(username)s, %(password)s, %(authid)s, %(register_datetime)s)""",
                 {
                     "username": user.username,
                     "password": user.password,
-                    "authid": user.authid
+                    "authid": user.authid,
+                    "register_datetime": datetime.now().strftime(self.register_datetime_format)
                 })
         self.conn.commit()
 

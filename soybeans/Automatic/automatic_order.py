@@ -6,7 +6,7 @@ from Work.exceptions import *
 from Automatic.dinner_ranker import DinnerRanker
 from Automatic.dinner_to_order import DinnerToOrder
 
-from datetime import date
+from datetime import date, timedelta, datetime
 
 import json
 import random
@@ -80,13 +80,41 @@ class AutomaticOrderManager:
 
         if num_of_users > 0:
             for user in autoorder_users:
-                result = self.automatic_orders_for_user_and_day(user, date.today())
-                if result == result_stop_autoorder:
-                    break
-                elif result == result_skip_user:
-                    continue
-                elif result == result_error:
-                    num_of_errors += 1
+                if "orderAll" in user.autoorder_request_settings:
+                    menus = self.distributor.distribute(Job(Jobs.GET_MENU, user))
+                    if isinstance(menus, Exception):
+                        if "Bad credentials" in str(menus):
+                            cherrypy.log.error("Credentials of user " + user.username + " are incorrect.")
+                            num_of_errors += 1
+                        else:
+                            cherrypy.log.error("Couldn't get today's menu for auto ordering. Error: " + str(menus))
+                            num_of_errors += 1
+                            break
+                    else:
+                        for menu in menus:
+                            result = self.automatic_orders_for_user_and_day(user, datetime.strptime(menu["date"],
+                                                                                                    "%Y-%m-%d")
+                                                                            .date())
+                            if result == result_stop_autoorder:
+                                break
+                            elif result == result_skip_user:
+                                continue
+                            elif result == result_error:
+                                num_of_errors += 1
+                else:
+                    add_days = 0
+                    if "orderDaysInAdvance" in user.autoorder_request_settings:
+                        try:
+                            add_days = int(user.autoorder_request_settings["orderDaysInAdvance"])
+                        except ValueError:
+                            add_days = 0
+                    result = self.automatic_orders_for_user_and_day(user, date.today() + timedelta(days=1))
+                    if result == result_stop_autoorder:
+                        break
+                    elif result == result_skip_user:
+                        continue
+                    elif result == result_error:
+                        num_of_errors += 1
         cherrypy.log(
             "Autoorder finished, fulfilled " + str(num_of_users - num_of_errors) + "/" + str(
                 num_of_users) + " requests")

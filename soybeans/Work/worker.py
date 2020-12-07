@@ -1,6 +1,6 @@
 from selenium import webdriver
 from Work import jidelna_webapp_handler
-
+from Work.daymenu import DayMenu
 from Work.jobs import Jobs
 from datetime import datetime
 from datetime import date
@@ -60,7 +60,7 @@ class Worker:
                     elif job.type == Jobs.GET_DAYMENU:
                         desired_date = job.arguments[0]
                         self.handler.select_date(desired_date)
-                        job.result = {"date": desired_date.isoformat(), "menus": self.handler.get_menu()}
+                        job.result = DayMenu(desired_date, self.handler.get_menu())
                     elif job.type == Jobs.GET_MENU:
                         daymenus = []
                         day_menu_available = True
@@ -79,7 +79,7 @@ class Worker:
                                         day_menu_available = False
                             else:
                                 day_menu_not_available_times = 0
-                                daymenus.append({"date": date_iter.isoformat(), "menus": daymenu})
+                                daymenus.append(DayMenu(date_iter, daymenu))
                             date_iter += timedelta(days=1)
                         job.result = daymenus
             except Exception as e:
