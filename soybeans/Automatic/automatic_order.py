@@ -92,7 +92,7 @@ class AutomaticOrderManager:
                             break
                     else:
                         for menu in menus:
-                            result = self.automatic_orders_for_user_and_day(user, datetime.strptime(menu["date"],
+                            result = self.automatic_orders_for_user_and_day(user, datetime.strptime(menu.date,
                                                                                                     "%Y-%m-%d")
                                                                             .date())
                             if result == result_stop_autoorder:
