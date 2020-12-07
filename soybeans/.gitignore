@@ -4,4 +4,4 @@
 login.html
 __pycache__
 .idea
-server.conf
+*.conf
