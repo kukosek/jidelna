@@ -5,11 +5,11 @@ import cherrypy
 class BrowserWorkDistributor:
     # Starts workers(browsers), you can specify how many
     # Then you can distribute a job and it will automatically assign it to a browser
-    def __init__(self, number_of_workers, cur):
+    def __init__(self, number_of_workers):
         self.workers = []
         for n in range(number_of_workers):
             cherrypy.log("Starting browser " + str(n + 1) + "/" + str(number_of_workers))
-            self.workers.append(Worker(cur))
+            self.workers.append(Worker())
 
     def distribute(self, job):
         target_worker = None

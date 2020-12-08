@@ -14,13 +14,12 @@ class Worker:
     # It consumes the information about what it should do from the class Job.
     # If you want to assign a task to the worker, you must supply a Job to the function do_job
     # It has a queue, so you can call it from more places parallel
-    def __init__(self, cur):
+    def __init__(self):
         headless = True  # SET TO FALSE FOR DEBUGGING
 
         options = webdriver.firefox.options.Options()
         if headless:
             options.add_argument('-headless')
-        self.cur = cur
         self.browser = webdriver.Firefox(options=options)
         self.handler = jidelna_webapp_handler.JidelnaWebappHandler(self.browser)
         self.callQueue = []

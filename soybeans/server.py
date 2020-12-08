@@ -30,7 +30,7 @@ conn = psycopg2.connect("dbname=jidelna user=jidelna host='localhost' password=j
 cur = conn.cursor()
 
 if __name__ == '__main__':
-    distributor = BrowserWorkDistributor(1, cur)
+    distributor = BrowserWorkDistributor(1)
     user_manager = UserManager(conn)
     login_guard = LoginGuard(conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
