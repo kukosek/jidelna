@@ -31,13 +31,13 @@ class AutomaticOrderManager:
                 else:
                     cherrypy.log.error("Couldn't get today's menu for auto ordering. Error: " + str(menu))
                     return result_stop_autoorder
-            menu = menu["menus"]
+            menu = menu.menus
             if len(menu) == 0:
                 cherrypy.log("Autoorder: no menu for today")
                 return result_stop_autoorder
             dinner_already_ordered = False
             for dinner in menu:
-                if dinner["status"] == "ordered" or dinner["status"] == "ordering":
+                if dinner.status == "ordered" or dinner.status == "ordering":
                     dinner_already_ordered = True
                     break
             if not dinner_already_ordered:
@@ -57,7 +57,7 @@ class AutomaticOrderManager:
 
                             # Remove the unavailable dinner from our menu
                             for dinner in menu:
-                                if dinner["menuNumber"] == menu_to_order.number:
+                                if dinner.menu_number == menu_to_order.number:
                                     menu.remove(dinner)
                             # skip to next loop
                         elif isinstance(result, Exception):
@@ -80,7 +80,7 @@ class AutomaticOrderManager:
 
         if num_of_users > 0:
             for user in autoorder_users:
-                if "orderAll" in user.autoorder_request_settings:
+                if "orderAll" in user.autoorder_request_settings and user.autoorder_request_settings["orderAll"]:
                     menus = self.distributor.distribute(Job(Jobs.GET_MENU, user))
                     if isinstance(menus, Exception):
                         if "Bad credentials" in str(menus):
@@ -92,9 +92,7 @@ class AutomaticOrderManager:
                             break
                     else:
                         for menu in menus:
-                            result = self.automatic_orders_for_user_and_day(user, datetime.strptime(menu.date,
-                                                                                                    "%Y-%m-%d")
-                                                                            .date())
+                            result = self.automatic_orders_for_user_and_day(user, menu.date)
                             if result == result_stop_autoorder:
                                 break
                             elif result == result_skip_user:
