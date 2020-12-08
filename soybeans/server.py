@@ -31,8 +31,8 @@ cur = conn.cursor()
 
 if __name__ == '__main__':
     distributor = BrowserWorkDistributor(1, cur)
-    user_manager = UserManager(cur, conn)
-    login_guard = LoginGuard(cur, conn)
+    user_manager = UserManager(conn)
+    login_guard = LoginGuard(conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
     schedule.every().day.at("06:19").do(autoorder_manager.do_automatic_orders)
 

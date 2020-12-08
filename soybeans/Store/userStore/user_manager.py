@@ -5,6 +5,7 @@ import json
 
 from datetime import datetime
 
+
 def db_row_to_user(row):
     user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_request_settings, autoorder_cancellation_dates, register_datetime = row
     if autoorder_settings is None:
@@ -17,15 +18,16 @@ def db_row_to_user(row):
         autoorder_request_settings = {}
     else:
         autoorder_request_settings = json.loads(autoorder_request_settings)
-    return User(user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_request_settings, autoorder_cancellation_dates, register_datetime)
+    return User(user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_request_settings,
+                autoorder_cancellation_dates, register_datetime)
 
 
 class UserManager:
     # Class for communicating with database storage of users
-    def __init__(self, cur, conn):
+    def __init__(self, conn):
         self.register_datetime_format = "%Y-%m-%d %H:%M:%S"
         self.conn = conn
-        self.cur = cur
+        cur = conn.cursor()
         self.table_name = "users"
         cur.execute(
             """CREATE TABLE IF NOT EXISTS """ + self.table_name + """
@@ -44,11 +46,12 @@ class UserManager:
 
     def get_user_by_authid(self, authid: str) -> User or None:
         # Retrieves an user from database. Returns None if no such authid
-        self.cur.execute(
+        cur = self.conn.cursor()
+        cur.execute(
             """SELECT * FROM users WHERE 
             authid = %(authid)s""",
             {'authid': authid})
-        rows = self.cur.fetchall()
+        rows = cur.fetchall()
         if len(rows) > 0:
             user = db_row_to_user(rows[0])
             return user
@@ -57,11 +60,12 @@ class UserManager:
 
     def get_user_by_username(self, username: str) -> User or None:
         # Retrieves an user from database. Returns None if no such authid
-        self.cur.execute(
+        cur = self.conn.cursor()
+        cur.execute(
             """SELECT * FROM users WHERE 
             username = %(username)s""",
             {'username': username})
-        rows = self.cur.fetchall()
+        rows = cur.fetchall()
         if len(rows) > 0:
             user = db_row_to_user(rows[0])
             return user
@@ -70,24 +74,25 @@ class UserManager:
 
     def get_autoorder_users(self) -> List[User]:
         # Returns a list of users that have autoordering enabled
-        self.cur.execute(
+        cur = self.conn.cursor()
+        cur.execute(
             "SELECT * FROM " + self.table_name + " WHERE autoorder_enable = true")
-        autoorder_users = self.cur.fetchall()
+        autoorder_users = cur.fetchall()
         for i in range(len(autoorder_users)):
             autoorder_users[i] = db_row_to_user(autoorder_users[i])
         return autoorder_users
 
     def add_or_update_user(self, user: User):
         # Saves the specified user to DB
-
+        cur = self.conn.cursor()
         # Check if user already exists
-        self.cur.execute("""SELECT * FROM """ + self.table_name + """ WHERE username = %(username)s""", {
+        cur.execute("""SELECT * FROM """ + self.table_name + """ WHERE username = %(username)s""", {
             'username': user.username})
-        query = self.cur.fetchall()
+        query = cur.fetchall()
         if len(query) > 0:  # If user exists
             # Update user record
             existing_user = db_row_to_user(query[0])
-            self.cur.execute("""UPDATE """ + self.table_name + """ 
+            cur.execute("""UPDATE """ + self.table_name + """ 
                                 SET username = %(username)s,
                                     password = %(password)s,
                                     authid = %(authid)s,
@@ -110,7 +115,7 @@ class UserManager:
             })
         else:  # No such user
             # Add new user
-            self.cur.execute(
+            cur.execute(
                 """INSERT INTO """ + self.table_name + """ (id, username, password, authid, register_datetime) VALUES (DEFAULT, %(username)s, %(password)s, %(authid)s, %(register_datetime)s)""",
                 {
                     "username": user.username,
@@ -121,7 +126,8 @@ class UserManager:
         self.conn.commit()
 
     def delete_user(self, user: User):
-        self.cur.execute(
+        cur = self.conn.cursor()
+        cur.execute(
             "DELETE FROM " + self.table_name + " WHERE username = %(username)s",
             {"username": user.username})
         self.conn.commit()
