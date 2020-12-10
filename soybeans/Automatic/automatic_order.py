@@ -106,7 +106,7 @@ class AutomaticOrderManager:
                             add_days = int(user.autoorder_request_settings["orderDaysInAdvance"])
                         except ValueError:
                             add_days = 0
-                    result = self.automatic_orders_for_user_and_day(user, date.today() + timedelta(days=1))
+                    result = self.automatic_orders_for_user_and_day(user, date.today() + timedelta(days=add_days))
                     if result == result_stop_autoorder:
                         break
                     elif result == result_skip_user:
