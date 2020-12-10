@@ -16,7 +16,6 @@ import psycopg2
 
 from datetime import datetime
 
-import traceback
 import logging
 
 import json
@@ -103,7 +102,6 @@ class JidelnaSuperstructureServer(object):
                             raise cherrypy.HTTPError(status=504, message="Jidelna server unreachable")
                         else:
                             cherrypy.log.error("/login Unknown exception:\n" + str(result))
-                            cherrypy.log.error(traceback.print_tb(result.__traceback__))
                             raise cherrypy.HTTPError(status=500)
                     else:
                         return "ok"
@@ -168,7 +166,6 @@ class JidelnaSuperstructureServer(object):
             if isinstance(daymenus, Exception):
                 self.login_exception_check(daymenus)
                 cherrypy.log.error("/menu unknown exception:" + str(daymenus))
-                cherrypy.log.error(traceback.print_tb(daymenus.__traceback__))
                 raise cherrypy.HTTPError(status=500)
             else:
                 if user.autoorder_enable:

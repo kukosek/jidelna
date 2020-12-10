@@ -7,6 +7,7 @@ from datetime import date
 from datetime import timedelta
 
 import threading
+import cherrypy
 
 
 class Worker:
@@ -83,6 +84,7 @@ class Worker:
                         job.result = daymenus
             except Exception as e:
                 job.result = e
+                cherrypy.log.error(traceback=True)
             # callback - send a signal that the job is finished.
             job.evt.set()  # the .wait() in do_job ends now
         self.lastUsedTime = datetime.now()
