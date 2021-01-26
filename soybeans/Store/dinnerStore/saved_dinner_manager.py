@@ -31,7 +31,7 @@ class SavedDinnerManager:
     def get_saved_dinner_by_orderable_dinner(self, orderable_dinner):
         self.cur.execute(
             "SELECT * FROM " + self.table_name + " WHERE full_name = %(full_name)s",
-            {"full_name": orderable_dinner.full_name}
+            {"full_name": orderable_dinner.name}
         )
         rows = self.cur.fetchall()
         if len(rows) == 0:

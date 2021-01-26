@@ -31,6 +31,7 @@ class Worker:
     def __perform_queue_jobs(self):
         # Runs in another thread
         # Does all the taks (jobs) it has in the queue
+        self.active = True
         while len(self.callQueue) != 0:
             job = self.callQueue.pop(0)  # removes first job from array and returns it
 
@@ -47,8 +48,10 @@ class Worker:
                     self.loggedUser = None
                 else:
                     last_request_elapsed_seconds = (datetime.now() - self.lastUsedTime).total_seconds()
+                    print(job.user.username, self.loggedUser.username)
                     if self.loggedUser is None or job.user.username != self.loggedUser.username or last_request_elapsed_seconds > 60.0:
                         login_for_job()
+                        print("loggin in")
                     if job.type == Jobs.SELECT_DATE:
                         self.handler.select_date(job.arguments[0])
                     elif job.type == Jobs.ORDER_MENU:
@@ -88,6 +91,7 @@ class Worker:
             # callback - send a signal that the job is finished.
             job.evt.set()  # the .wait() in do_job ends now
         self.lastUsedTime = datetime.now()
+        self.active = False
         return
 
     def do_job(self, job, *args):

@@ -1,12 +1,17 @@
 from datetime import datetime, date
 import locale
 from selenium.common.exceptions import StaleElementReferenceException
+from selenium.webdriver.support.expected_conditions import staleness_of
+
 from Work.exceptions import *
 from Work.orderable_dinner import OrderableDinner
+from selenium.webdriver.support.ui import WebDriverWait
+import time
 
 locale.setlocale(locale.LC_TIME, "cs_CZ.UTF-8")
 
 jidelna_webroot = 'http://5.104.18.31/jidelna/'
+timeout = 5
 
 
 class DayOrder:
@@ -37,9 +42,11 @@ class DayOrder:
 
         def click_next_month():
             self.browser.find_element_by_xpath("//a[@title='Přejít na další měsíc']").click()
+            wait_for_page_load(self.browser)
 
         def click_prev_month():
             self.browser.find_element_by_xpath("//a[@title='Přejít na předchozí měsíc']").click()
+            wait_for_page_load(self.browser)
 
         while not month_finded:
             try:
@@ -75,9 +82,10 @@ class DayOrder:
 
         try:
             get_day_clickable().click()
+            wait_for_page_load(self.browser)
         except StaleElementReferenceException:
             self.browser.get('%sPersonDayPerOrderRequest.aspx' % jidelna_webroot)
-            get_day_clickable()
+            get_day_clickable().click()
 
         def get_menu_table():
             return browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0]
@@ -108,12 +116,11 @@ class DayOrder:
                 self.menu.append(
                     OrderableDinner(
                         dinner_type=menu_info[3].text,
-                        menu_number= int(menu_info[4].text),
+                        menu_number=int(menu_info[4].text),
                         name=menu_info[5].text,
                         allergens=allergens
                     )
                 )
-
 
             try:
                 append_dinner()
@@ -158,6 +165,7 @@ class DayOrder:
             # Order the specified dinner
             self.browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
                 "tr")[menu_index + 1].find_elements_by_tag_name("td")[0].find_elements_by_tag_name("input")[0].click()
+            wait_for_page_load(self.browser)
             if "Uzavřeno" in self.browser.page_source:
                 if "max" in self.browser.page_source:
                     raise DinnerOrderingClosedException("Dinner sold out")
@@ -176,10 +184,20 @@ class DayOrder:
             # Cancel the specified dinner
             self.browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
                 "tr")[menu_index + 1].find_elements_by_tag_name("td")[1].find_elements_by_tag_name("input")[0].click()
+            wait_for_page_load(self.browser)
             if "Uzavřeno" in self.browser.page_source:
                 if "max" in self.browser.page_source:
                     raise DinnerOrderingClosedException("Dinner sold out")
                 raise DinnerOrderingClosedException("Too late. Not accepting orders now")
+
+
+def wait_for_page_load(browser, elemid=None):
+    if elemid is None:
+        old_page = browser.find_element_by_tag_name('html')
+    else:
+        old_page = browser.find_element_by_tag_name(elemid)
+    yield
+    WebDriverWait(browser, timeout).until(staleness_of(old_page))
 
 
 class JidelnaWebappHandler:
@@ -190,16 +208,20 @@ class JidelnaWebappHandler:
         self.dayorder = None
 
     def login(self, username, password):
-        if self.logged_in:
-            try:
-                self.logout()
-            except Exception:
-                pass
+        try:
+            self.logout()
+        except Exception:
+            pass
+
         def login_basic():
             self.browser.get('%sjidelna.aspx' % jidelna_webroot)
+            wait_for_page_load(self.browser, 'txbName')
+
             self.browser.find_element_by_id('txbName').send_keys(username)
             self.browser.find_element_by_id('txbPWD').send_keys(password)
             self.browser.find_element_by_id('btnLogin').click()
+            wait_for_page_load(self.browser)
+
         try:
             login_basic()
         except StaleElementReferenceException:
@@ -215,6 +237,7 @@ class JidelnaWebappHandler:
 
     def logout(self):
         self.browser.find_element_by_id('imbLogOff').click()
+        wait_for_page_load(self.browser)
         self.logged_in = False
 
     def select_date(self, desired_date):
