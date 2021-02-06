@@ -1,4 +1,3 @@
 #!/bin/bash
-psql -U postgres -c "CREATE DATABASE jidelna;"
-psql -U postgres -c "CREATE USER jidelna WITH ENCRYPTED PASSWORD 'jidelna';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE jidelna TO jidelna;"
+dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
+sudo su - postgres -c "psql -f $dir/create_db.sql"
