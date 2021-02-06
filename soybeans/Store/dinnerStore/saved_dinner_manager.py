@@ -35,7 +35,11 @@ class SavedDinnerManager:
         )
         rows = self.cur.fetchall()
         if len(rows) == 0:
-            return None
+            self.cur.execute(
+                "INSERT INTO " + self.table_name + " VALUES(default, %(full_name)s, "", "", [], 0.0, [], []))",
+                    {"full_name": orderable_dinner.name}
+                )
+            self.conn.commit()
         else:
             return db_row_to_saved_dinner(rows[0])
 
