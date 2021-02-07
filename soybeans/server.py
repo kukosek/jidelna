@@ -25,11 +25,13 @@ import string
 import time
 import schedule
 
+import work_config
+
 conn = psycopg2.connect("dbname=jidelna user=jidelna host='localhost' password=jidelna")
 cur = conn.cursor()
 
 if __name__ == '__main__':
-    distributor = BrowserWorkDistributor(1)
+    distributor = BrowserWorkDistributor(work_config.num_of_workers)
     user_manager = UserManager(conn)
     login_guard = LoginGuard(conn)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
@@ -298,7 +300,7 @@ class ThreadController(cherrypy.process.plugins.SimplePlugin):
 
     def stop(self):
         run_scheduler.running = False
-        distributor.close_all()
+        #distributor.close_all()
 
 
 if __name__ == '__main__':
@@ -307,7 +309,7 @@ if __name__ == '__main__':
             cur.close()
             conn.close()
             logging.info("PostgreSQL connection is closed")
-        distributor.close_all()  # test
+        #distributor.close_all()  # test
 
 
     thread_controller = ThreadController(cherrypy.engine)

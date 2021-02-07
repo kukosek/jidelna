@@ -9,6 +9,7 @@ from datetime import timedelta
 import threading
 import cherrypy
 
+import work_config
 
 class Worker:
     # Worker is a thing you can assign tasks to.
@@ -16,7 +17,7 @@ class Worker:
     # If you want to assign a task to the worker, you must supply a Job to the function do_job
     # It has a queue, so you can call it from more places parallel
     def __init__(self):
-        headless = True  # SET TO FALSE FOR DEBUGGING
+        headless = work_config.headless  # SET TO FALSE FOR DEBUGGING
 
         options = webdriver.firefox.options.Options()
         if headless:

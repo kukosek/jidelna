@@ -7,3 +7,4 @@ __pycache__
 *.conf
 start.sh
 test.py
+*_config.py
