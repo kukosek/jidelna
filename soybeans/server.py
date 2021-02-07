@@ -27,7 +27,8 @@ import schedule
 
 import work_config
 
-conn = psycopg2.connect("dbname=jidelna user=jidelna host='localhost' password=jidelna")
+with open('db.conf', 'r') as f:
+    conn = psycopg2.connect(f.read())
 cur = conn.cursor()
 
 if __name__ == '__main__':

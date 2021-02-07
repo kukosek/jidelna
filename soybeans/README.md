@@ -106,9 +106,8 @@ of interaction with our canteen web app, like login, logout, get menu and such.
 - `python3`
 	- comes by default in linux distros
 - `postgresql` database
-	- I have hardcoded some shitty credentials right into server.py
-	- so make a database, if need to you can of course modify it in server.py
-	- If you want to run it locally, you can just run the script setup-tools/db-create.sh to create database and user
+	- Setup your database and a user with a password, and then configure the DB connection file (see configuration)
+	- Or if you want to run it locally using the default db.conf creds, you can just run the script setup-tools/db-create.sh to create database and user
 - python modules: `cherrypy`, `selenium`, `schedule`
 	- debian one liner: `sudo apt install python3-cherrypy3 python3-selenium python3-schedule`
 - firefox
@@ -116,14 +115,16 @@ of interaction with our canteen web app, like login, logout, get menu and such.
 - geckodriver
 	- download the latest and add it to path
 	- or just do `sudo cp setup-tools/geckodriver /usr/bin && sudo chmod 777 /usr/bin/geckodriver`
+- this repository: just do a git clone, then cd to the repo dir, and do the configuration stuff
 
 ### Configuration
 1. You must specify your ip adress/host name in `server.conf`.
 This file is just cherrypy config, you can add anything you want to it.
 So do `cp setup-tools/server.example.conf server.conf` and edit the hostname.
-
 2. Worker config - specify how many workers you want, and if you want headless browsers
 `cp setup-tools/work_config.example.py work_config.py`
+3. Database config - `cp setup-tools/db.example.conf db.conf`
+Modify it to your needs
 
 ### Run
 just run server.py with python 3
