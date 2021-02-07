@@ -1,0 +1,11 @@
+[Unit]
+Description=Jidelna Selenium Api
+After=postgresql.service
+
+[Service]
+Restart=always
+WorkingDirectory=/home/jidelna-app/server/
+ExecStart=python3 server.py
+
+[Install]
+WantedBy=multi-user.target
