@@ -118,7 +118,12 @@ of interaction with our canteen web app, like login, logout, get menu and such.
 	- or just do `sudo cp setup-tools/geckodriver /usr/bin && sudo chmod 777 /usr/bin/geckodriver`
 
 ### Configuration
-You must specify your ip adress/host name in `server.conf`.
+1. You must specify your ip adress/host name in `server.conf`.
+This file is just cherrypy config, you can add anything you want to it.
+So do `cp setup-tools/server.example.conf server.conf` and edit the hostname.
+
+2. Worker config - specify how many workers you want, and if you want headless browsers
+`cp setup-tools/work_config.example.py work_config.py`
 
 ### Run
 just run server.py with python 3

@@ -4,7 +4,7 @@
 login.html
 __pycache__
 .idea
-*.conf
+/server.conf
 start.sh
 test.py
 *_config.py
