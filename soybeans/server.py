@@ -300,7 +300,10 @@ class ThreadController(cherrypy.process.plugins.SimplePlugin):
 
     def stop(self):
         run_scheduler.running = False
-        #distributor.close_all()
+        try:
+            distributor.close_all()
+        except Exception:
+            pass
 
 
 if __name__ == '__main__':
