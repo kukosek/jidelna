@@ -3,6 +3,7 @@ Description=Jidelna Selenium Api
 After=postgresql.service
 
 [Service]
+User=jidelna-app
 Restart=always
 WorkingDirectory=/home/jidelna-app/server/
 ExecStart=python3 server.py

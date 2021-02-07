@@ -9,9 +9,12 @@ give you HTTP error 401 Unauthorized. You have 10 attempts of incorrect password
 	- POST
 		- needs request body: `{"username": "johndoe0", "password": "secretpassword420"}`
 		- returns status code 200 and sets a `authid` cookie if everything went ok
+[//]: # (Hello)
+
 So now you have a magic cookie! Now you can use all other endpoints.
 All endpoints should return HTTP code 200 if everything went out smoothly, otherwise it should
 give you an http error with a nice message in response body.
+
 - /menu
 	- GET
 		- returns list of days that have menus - CantryMenu ( see data models )
@@ -121,3 +124,11 @@ You must specify your ip adress/host name in server.conf
 just run server.py with python 3
 
 `python3 server.py`
+
+### Run at boot (systemd)
+1. set the working dir in the example service at `setup-tools/jidelna.example.service`
+2. `sudo cp setup-tools/jidelna-app.example.service /etc/systemd/system/jidelna-app.service`
+3. `sudo systemctl daemon-reload`
+4. `sudo systemctl enable jidelna-app.service`
+5. `sudo systemctl start jidelna-app.service`
+6. Look at the systemd logs. `sudo journalctl -U jidelna-app.service`
