@@ -118,7 +118,7 @@ of interaction with our canteen web app, like login, logout, get menu and such.
 	- or just do `sudo cp setup-tools/geckodriver /usr/bin && sudo chmod 777 /usr/bin/geckodriver`
 
 ### Configuration
-You must specify your ip adress/host name in server.conf
+You must specify your ip adress/host name in `server.conf`.
 
 ### Run
 just run server.py with python 3
