@@ -137,4 +137,4 @@ just run server.py with python 3
 3. `sudo systemctl daemon-reload`
 4. `sudo systemctl enable jidelna-app.service`
 5. `sudo systemctl start jidelna-app.service`
-6. Look at the systemd logs. `sudo journalctl -U jidelna-app.service`
+6. Look at the systemd logs. `sudo journalctl -u jidelna-app.service`
