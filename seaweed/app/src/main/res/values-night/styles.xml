@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="bigCheckbox">
+        <item name="colorAccent">#03DAC5</item>
+
+        <item name="colorControlNormal">#8AFFFFFF</item>
+        <item name="colorControlActivated">#03DAC5</item>
+
+    </style>
+
+</resources>

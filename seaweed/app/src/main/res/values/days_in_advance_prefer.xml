@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array
+        name="days_in_advance_prefer">
+        <item>0 days in advance (dinner may already be sold out sometimes)</item>
+        <item>1 day in advance</item>
+        <item>2 days in advance</item>
+    </string-array>
+
+</resources>

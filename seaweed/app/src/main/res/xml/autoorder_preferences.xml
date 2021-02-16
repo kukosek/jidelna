@@ -1,0 +1,64 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <SwitchPreferenceCompat
+        app:key="autoorder_enable"
+        app:title="@string/autoorder_enable"
+        app:summaryOff="@string/autoorder_disabled_description"
+        app:summaryOn="@string/autoorder_enabled_description"
+        />
+
+    <PreferenceCategory android:title="@string/autoorder_dinner_preferences">
+        <PreferenceCategory android:title="@string/autoorder_basic_prefs">
+            <ListPreference
+                android:dependency="autoorder_enable"
+                android:defaultValue="None"
+                android:entries="@array/menu_numbers_prefer"
+                android:entryValues="@array/menu_numbers_prefer_values"
+                android:key="preffered_menu_number"
+                android:title="@string/preffered_menu_number" />
+        </PreferenceCategory>
+        <PreferenceCategory android:title="@string/allergens">
+            <MultiSelectListPreference
+                android:dependency="autoorder_enable"
+                android:entries="@array/allergens"
+                android:entryValues="@array/allergens_values"
+                android:key="allergens_lovelist"
+                android:title="@string/allergens_lovelist"
+                android:summary="@string/allergens_lovelist_description"/>
+            <MultiSelectListPreference
+                android:dependency="autoorder_enable"
+                android:entries="@array/allergens"
+                android:entryValues="@array/allergens_values"
+                android:key="allergens_blacklist"
+                android:title="@string/allergens_blacklist"
+                android:summary="@string/allergens_blacklist_description"/>
+            <SwitchPreferenceCompat
+                android:dependency="autoorder_enable"
+                app:key="autoorder_order_uncomplying"
+                app:title="@string/order_uncomplying"
+                app:summaryOff="@string/order_uncomplying_off_description"
+                app:summaryOn="@string/order_uncomplying_on_description"
+                />
+        </PreferenceCategory>
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="@string/autoorder_request_preferences"
+        android:dependency="autoorder_enable">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="autoorder_request_order_one_by_one"
+            android:title="@string/autoorder_request_order_one_by_one"
+            android:summaryOn="@string/autoorder_request_order_one_by_one_enabled"
+            android:summaryOff="@string/autoorder_request_order_one_by_one_disabled"/>
+        <ListPreference
+            android:defaultValue="1"
+            android:entries="@array/days_in_advance_prefer"
+            android:entryValues="@array/days_in_advance_prefer_values"
+            android:key="autoorder_request_days_in_advance"
+            android:title="@string/autoorder_request_days_in_advance"
+            android:dependency="autoorder_request_order_one_by_one"
+            android:summary="%s"/>
+    </PreferenceCategory>
+</PreferenceScreen>

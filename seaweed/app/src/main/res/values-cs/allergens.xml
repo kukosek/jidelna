@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array
+        name="allergens">
+        <item>Obiloviny obsahující lepek</item>
+        <item>Korýši</item>
+        <item>Vajca</item>
+        <item>Ryby</item>
+        <item>Arašídy</item>
+        <item>Sója</item>
+        <item>Mléko</item>
+        <item>Ořechy</item>
+        <item>Celer</item>
+        <item>Hořčica</item>
+        <item>Sezam</item>
+        <item>Oxid siřičitý, siřičitany</item>
+        <item>Vlčí bob (lupina)</item>
+        <item>Měkkýši</item>
+    </string-array>
+</resources>

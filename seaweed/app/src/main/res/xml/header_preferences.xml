@@ -1,0 +1,25 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <Preference
+        app:fragment="org.slavicin.jidelna.activities.settings.SettingsActivity$GeneralFragment"
+        app:icon="@drawable/ic_baseline_settings_24"
+        app:key="general_header"
+        app:title="@string/general_header" />
+
+    <Preference
+
+        app:fragment="org.slavicin.jidelna.activities.settings.SettingsActivity$AutoorderFragment"
+        app:icon="@drawable/sync"
+        app:key="autoorder_header"
+        app:title="@string/autoorder_header" />
+    <Preference
+        app:fragment="org.slavicin.jidelna.activities.settings.SettingsActivity$NotificationsFragment"
+        app:icon="@drawable/ic_baseline_notifications_24"
+        app:key="notifications_header"
+        app:title="@string/notifications_header" />
+    <Preference
+        app:fragment="org.slavicin.jidelna.activities.settings.SettingsActivity$ProfileFragment"
+        app:icon="@drawable/ic_baseline_person_24"
+        app:key="profile_header"
+        app:title="@string/profile_header" />
+</PreferenceScreen>

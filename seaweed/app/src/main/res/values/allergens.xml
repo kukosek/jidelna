@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array
+        name="allergens">
+        <item>Cereals containing gluten</item>
+        <item>Crustaceans</item>
+        <item>Eggs</item>
+        <item>Fish</item>
+        <item>Peanuts</item>
+        <item>Soybeans</item>
+        <item>Milk</item>
+        <item>Nuts</item>
+        <item>Celery</item>
+        <item>Mustard</item>
+        <item>Sesame seeds</item>
+        <item>Sulphur dioxide and sulphites</item>
+        <item>Lupin</item>
+        <item>Molluscs</item>
+    </string-array>
+</resources>
