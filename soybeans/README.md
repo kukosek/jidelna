@@ -101,8 +101,22 @@ Workers make use of the module `jidelna_webapp_handler`, which is just a helper 
 functions of a browser/webdriver you pass to it. It has the basic functions
 of interaction with our canteen web app, like login, logout, get menu and such.
 
-## Running it
+## Running it with Docker
+
+You need Docker, docker-compose
+
+1. Build your image release
+	- `docker build -t my-jidelnaserver:latest .`
+
+2. Edit docker compose image name in *docker-compose.yml*
+from docker.dulik.net/... to my-jidelnaserver
+
+3. Run it: `docker-compose up`, or in background: `docker-compose up -d`
+
+## Running it without Docker
+
 ### Prerequisities
+
 - `python3`
 	- comes by default in linux distros
 - `postgresql` database
@@ -115,16 +129,25 @@ of interaction with our canteen web app, like login, logout, get menu and such.
 - geckodriver
 	- download the latest and add it to path
 	- or just do `sudo cp setup-tools/geckodriver /usr/bin && sudo chmod 777 /usr/bin/geckodriver`
+- Czech locale
+	- sudo `echo "cs_CZ.UTF-8 UTF-8" >> /etc/locale.gen && locale-gen`
 - this repository: just do a git clone, then cd to the repo dir, and do the configuration stuff
 
 ### Configuration
-1. You must specify your ip adress/host name in `server.conf`.
-This file is just cherrypy config, you can add anything you want to it.
-So do `cp setup-tools/server.example.conf server.conf` and edit the hostname.
-2. Worker config - specify how many workers you want, and if you want headless browsers
-`cp setup-tools/work_config.example.py work_config.py`
-3. Database config - `cp setup-tools/db.example.conf db.conf`
-Modify it to your needs
+
+You can write environment variables right into your system environment or
+to the `.env` file. If you wanna use the file, you can copy a template from
+setup tools. `cp setup-tools/example.env .env`
+
+1. You must specify your ip adress/host name in the env vars `HOST` and `PORT`.
+Next specify if you want to show tracebacks in error request responses in env var
+`REQUEST_SHOW_ERRORS`.
+
+2. Specify your postgresql database connection string in envvar `DB_CONF`
+
+3. Specify how many workers you want in var `NUM_OF_WORKERS`,
+4. and if you want headless browsers in var `HEADLESS`
+
 
 ### Run
 just run server.py with python 3

@@ -9,7 +9,9 @@ from datetime import timedelta
 import threading
 import cherrypy
 
-import work_config
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class Worker:
     # Worker is a thing you can assign tasks to.
@@ -17,7 +19,11 @@ class Worker:
     # If you want to assign a task to the worker, you must supply a Job to the function do_job
     # It has a queue, so you can call it from more places parallel
     def __init__(self):
-        headless = work_config.headless  # SET TO FALSE FOR DEBUGGING
+        try:
+            headless = os.getenv('HEADLESS').lower() == "true"
+        except Exception:
+            print("No HEADLESS env variable, defaulting to true.")
+            headless = True
 
         options = webdriver.firefox.options.Options()
         if headless:

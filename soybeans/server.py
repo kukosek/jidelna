@@ -23,32 +23,46 @@ import random
 import string
 
 import time
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 import schedule
 
-import work_config
+from Store.DbHolder import DbHolder
 
-with open('db.conf', 'r') as f:
-    conn = psycopg2.connect(f.read())
-cur = conn.cursor()
 
 if __name__ == '__main__':
-    distributor = BrowserWorkDistributor(work_config.num_of_workers)
-    user_manager = UserManager(conn)
-    login_guard = LoginGuard(conn)
+    db_holder = DbHolder()
+    try:
+        num_of_workers = os.getenv('NUM_OF_WORKERS')
+        if num_of_workers == None:
+            raise Exception
+        else:
+            num_of_workers = int(num_of_workers)
+    except Exception:
+        print("No NUM_OF_WORKERS env variable, defaulting to 1.")
+        num_of_workers = 1
+    distributor = BrowserWorkDistributor(num_of_workers)
+    user_manager = UserManager(db_holder)
+    login_guard = LoginGuard(db_holder)
     autoorder_manager = AutomaticOrderManager(distributor, user_manager)
     schedule.every().day.at("06:19").do(autoorder_manager.do_automatic_orders)
 
 
 class JidelnaSuperstructureServer(object):
     def get_request_origin_ip(self):
-        raddr = cherrypy.request.headers["Remote-Addr"]
-        if "127.0.0.1" in raddr:
-            if "X-Forwarded-For" in cherrypy.request.headers:
-                return cherrypy.request.headers["X-Forwarded-For"]
-            else:
-                raise cherrypy.HTTPError(status=500, message="Could not identify your IP.")
+        if "X-ORIGINAL-FORWARDED-FOR" in cherrypy.request.headers:
+            return cherrypy.request.headers["X-ORIGINAL-FORWARDED-FOR"]
         else:
-            return raddr
+            raddr = cherrypy.request.headers["Remote-Addr"]
+            if "127.0.0.1" in raddr:
+                if "X-Forwarded-For" in cherrypy.request.headers:
+                    return cherrypy.request.headers["X-Forwarded-For"]
+                else:
+                    raise cherrypy.HTTPError(status=500, message="Could not identify your IP.")
+            else:
+                return raddr
 
     def get_request_params(self):
         try:
@@ -322,13 +336,14 @@ if __name__ == '__main__':
     thread_controller = ThreadController(cherrypy.engine)
     thread_controller.subscribe()
 
-    config = None
+    config = {}
     try:
-        with open("server.conf", 'r') as file:
-            config = json.loads(file.read().replace("'", "\""))
+        config['server.socket_host'] = os.getenv("HOST")
+        config['server.socker_port'] = os.getenv("PORT")
+        config['request.show_tracebacks'] = os.getenv("REQUEST_SHOW_ERRORS").lower() == "true"
+        config['log.screen'] = True
     except Exception as e:
-        print("Could not open server config file server.conf")
-        print(str(e))
+        print("Error while reading server config env variables")
         finish()
     try:
         cherrypy.config.update(config)

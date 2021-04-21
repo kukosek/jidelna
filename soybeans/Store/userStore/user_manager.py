@@ -5,6 +5,7 @@ import json
 
 from datetime import datetime
 
+from Store.DbHolder import DbHolder
 
 def db_row_to_user(row):
     user_id, username, password, authid, autoorder_enable, autoorder_settings, autoorder_request_settings, autoorder_cancellation_dates, register_datetime = row
@@ -24,10 +25,10 @@ def db_row_to_user(row):
 
 class UserManager:
     # Class for communicating with database storage of users
-    def __init__(self, conn):
+    def __init__(self, db_holder: DbHolder):
         self.register_datetime_format = "%Y-%m-%d %H:%M:%S"
-        self.conn = conn
-        cur = conn.cursor()
+        self.db_holder = db_holder
+        cur = db_holder.get_cursor()
         self.table_name = "users"
         cur.execute(
             """CREATE TABLE IF NOT EXISTS """ + self.table_name + """
@@ -42,13 +43,13 @@ class UserManager:
                 autoorder_cancellation_dates date[],
                 register_datetime timestamp
             );""")
-        conn.commit()
+        db_holder.conn.commit()
 
     def get_user_by_authid(self, authid: str) -> User or None:
         # Retrieves an user from database. Returns None if no such authid
-        cur = self.conn.cursor()
+        cur = self.db_holder.get_cursor()
         cur.execute(
-            """SELECT * FROM users WHERE 
+            """SELECT * FROM users WHERE
             authid = %(authid)s""",
             {'authid': authid})
         rows = cur.fetchall()
@@ -60,9 +61,9 @@ class UserManager:
 
     def get_user_by_username(self, username: str) -> User or None:
         # Retrieves an user from database. Returns None if no such authid
-        cur = self.conn.cursor()
+        cur = self.db_holder.get_cursor()
         cur.execute(
-            """SELECT * FROM users WHERE 
+            """SELECT * FROM users WHERE
             username = %(username)s""",
             {'username': username})
         rows = cur.fetchall()
@@ -74,7 +75,7 @@ class UserManager:
 
     def get_autoorder_users(self) -> List[User]:
         # Returns a list of users that have autoordering enabled
-        cur = self.conn.cursor()
+        cur = self.db_holder.get_cursor()
         cur.execute(
             "SELECT * FROM " + self.table_name + " WHERE autoorder_enable = true")
         autoorder_users = cur.fetchall()
@@ -84,7 +85,7 @@ class UserManager:
 
     def add_or_update_user(self, user: User):
         # Saves the specified user to DB
-        cur = self.conn.cursor()
+        cur = self.db_holder.get_cursor()
         # Check if user already exists
         cur.execute("""SELECT * FROM """ + self.table_name + """ WHERE username = %(username)s""", {
             'username': user.username})
@@ -92,7 +93,7 @@ class UserManager:
         if len(query) > 0:  # If user exists
             # Update user record
             existing_user = db_row_to_user(query[0])
-            cur.execute("""UPDATE """ + self.table_name + """ 
+            cur.execute("""UPDATE """ + self.table_name + """
                                 SET username = %(username)s,
                                     password = %(password)s,
                                     authid = %(authid)s,
@@ -123,11 +124,11 @@ class UserManager:
                     "authid": user.authid,
                     "register_datetime": datetime.now().strftime(self.register_datetime_format)
                 })
-        self.conn.commit()
+        self.db_holder.conn.commit()
 
     def delete_user(self, user: User):
-        cur = self.conn.cursor()
+        cur = self.db_holder.conn.cursor()
         cur.execute(
             "DELETE FROM " + self.table_name + " WHERE username = %(username)s",
             {"username": user.username})
-        self.conn.commit()
+        self.db_holder.conn.commit()

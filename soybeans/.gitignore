@@ -8,3 +8,4 @@ __pycache__
 start.sh
 test.py
 *_config.py
+/db/

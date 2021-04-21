@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:13.1
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres" ]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d/
+  api:
+    image: docker.dulik.net/jidelnaserver:latest
+    restart: always
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - REQUEST_SHOW_ERRORS=false
+      - DB_CONF=dbname=postgres user=postgres host='postgres' password=postgres
+      - NUM_OF_WORKERS=1
+      - HEADLESS=true
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
