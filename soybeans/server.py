@@ -1,4 +1,5 @@
 import cherrypy
+import cherrypy_cors
 
 import threading
 
@@ -31,6 +32,8 @@ import schedule
 
 from Store.DbHolder import DbHolder
 
+def CORS():
+    cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
 if __name__ == '__main__':
     db_holder = DbHolder()
@@ -338,6 +341,9 @@ if __name__ == '__main__':
 
     config = {}
     try:
+        config['/']= {'tools.CORS.on': True }
+        config['tools.CORS.on'] = True
+        config['cors.expose.on'] = True
         config['server.socket_host'] = os.getenv("HOST")
         config['server.socker_port'] = os.getenv("PORT")
         config['request.show_tracebacks'] = os.getenv("REQUEST_SHOW_ERRORS").lower() == "true"
@@ -347,6 +353,8 @@ if __name__ == '__main__':
         finish()
     try:
         cherrypy.config.update(config)
+        cherrypy_cors.install()
+        cherrypy.tools.CORS = cherrypy.Tool("before_finalize", CORS)
         cherrypy.quickstart(JidelnaSuperstructureServer())
     except Exception:
         finish()
