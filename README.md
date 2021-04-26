@@ -13,10 +13,10 @@
 
 ## Structure
 
-| Codebase              |      Description      |
-| :------------------:  | :-------------------: |
-| [soybeans](soybeans)  |Python+Selenium backend|
-| [seaweed](seaweed)	|     Android app       |
-| [tempeh](tempeh)		| Next.js app		    |
-| [lawyerup](lawyerup)	|Legal texts, terms	    |
-| [rainbows](rainbows)  |Graphics, banners, logo|
+| Codebase              |      Description      |	Status	  |				Live				|
+| :------------------:  | :-------------------: | :--------:  |	:-----------------------------: |
+| [soybeans](soybeans)  |Python+Selenium backend|	Finished  |	[jidelna.techbrick.cz/api](https://jidelna.techbrick.cz/api) |
+| [seaweed](seaweed)	|     Android app       |  Finished	  |	[Googe Play](https://play.google.com/store/apps/details?id=org.slavicin.jidelna)|
+| [tempeh](tempeh)		| Next.js app		    |	WIP		  |	[jidelna.netlify.app](https://jidelna.netlify.app/) |
+| [lawyerup](lawyerup)	|Legal texts, terms	    |	OK		  |	[jidelna.techbrick.cz](https://jidelna.techbrick.cz/) |
+| [rainbows](rainbows)  |Graphics, banners, logo|	OK		  |									|
