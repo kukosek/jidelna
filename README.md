@@ -1,7 +1,7 @@
 # Jidelna Slavicin
 
 <a href="https://github.com/kukosek/jidelna"><p align="center">
-<img height=100 src="https://raw.githubusercontent.com/benawad/dogehouse/staging/.redesign-assets/dogehouse_logo.svg"/>
+<img height=100 src="https://raw.githubusercontent.com/kukosek/jidelna/main/rainbows/banner-en.png"/>
 
 </p></a>
 <p align="center">
