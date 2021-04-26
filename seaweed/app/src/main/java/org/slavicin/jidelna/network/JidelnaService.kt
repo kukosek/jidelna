@@ -17,6 +17,7 @@ import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 
 data class UserCredentials(
@@ -61,9 +62,13 @@ class ServiceBuilder constructor(){
     fun build(baseUrl: String, preferences: SharedPreferences) : RestApi {
         val logging = HttpLoggingInterceptor()
         logging.setLevel(HttpLoggingInterceptor.Level.BODY)
-        val client = OkHttpClient.Builder().addInterceptor(AddCookiesInterceptor(preferences)).addInterceptor(
-            ReceivedCookiesInterceptor(preferences)
-        ).addInterceptor(logging).build()
+        val client = OkHttpClient.Builder()
+            .addInterceptor(AddCookiesInterceptor(preferences))
+            .addInterceptor(ReceivedCookiesInterceptor(preferences)
+            ).addInterceptor(logging)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
