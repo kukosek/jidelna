@@ -1,0 +1,48 @@
+<resources>
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="preferenceTheme">@style/preference</item>
+
+        <item name="android:textColorPrimary">@color/primary_text_color_selector</item>
+        <item name="android:textColorSecondary">@color/secondary_text_color_selector</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <item name="alertDialogTheme">@style/dialogTheme</item>
+    </style>
+
+    <style name="bigCheckbox">
+
+    </style>
+    <style name="preference" parent="PreferenceThemeOverlay.v14.Material">
+        <item name="colorAccent">@color/textColorSecondary</item>
+        <item name="android:backgroundTint">@color/colorBackgroundSecondary</item>
+    </style>
+    <style name="PopupMenu" parent="ThemeOverlay.AppCompat.Light">
+        <item name="android:colorBackground">@color/colorBackgroundPrimary</item>
+    </style>
+    <style name="dialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="colorPrimary">@color/textColorSecondary</item>
+        <item name="colorPrimaryDark">@color/textColorPrimary</item>
+
+        <item name="android:background">@color/colorBackgroundPrimary</item>
+        <item name="android:popupBackground">@color/colorBackgroundPrimary</item>
+        <item name="android:windowBackground">@color/colorBackgroundPrimary</item>
+        <item name="android:itemBackground">@color/colorBackgroundPrimary</item>
+
+        <item name="android:textColor">@color/textColorPrimary</item>
+        <item name="android:textColorPrimary">@color/textColorPrimary</item>
+        <item name="color">@color/textColorSecondary</item>
+        <item name="android:colorAccent">@color/textColorPrimary</item>
+        <item name="android:textColorAlertDialogListItem">@color/textColorPrimary</item>
+        <item name="textColorAlertDialogListItem">@color/textColorPrimary</item>
+
+
+        <item name="colorControlNormal">@color/textColorSecondary</item>
+        <item name="colorControlActivated">@color/cyan</item>
+    </style>
+
+
+</resources>

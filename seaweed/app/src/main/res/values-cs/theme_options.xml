@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="theme_options">
+        <item>Světlý</item>
+        <item>Tmavý</item>
+        <item>Podle systému</item>
+
+    </string-array>
+</resources>

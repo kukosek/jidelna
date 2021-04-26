@@ -1,0 +1,35 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="notification_today_dinner_not_ordered"
+        android:title="@string/notification_today_dinner_not_ordered"
+        android:summary="@string/notification_today_dinner_not_ordered_summary"/>
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="notification_today_dinner_ordered"
+        android:title="@string/notification_today_dinner_ordered"
+        android:summary="@string/notification_today_dinner_ordered_summary"/>
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="notification_today_dinner_autoordered"
+        android:title="@string/notification_today_dinner_autoordered"
+        android:summary="@string/notification_today_dinner_autoordered_summary"/>
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="notification_tomorrow_dinner_not_ordered"
+        android:title="@string/notification_tomorrow_dinner_not_ordered"
+        android:summary="@string/notification_tomorrow_dinner_not_ordered_summary"/>
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="notification_tomorrow_dinner_ordered"
+        android:title="@string/notification_tomorrow_dinner_ordered"
+        android:summary="@string/notification_tomorrow_dinner_ordered_summary"/>
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="notification_tomorrow_dinner_autoordered"
+        android:title="@string/notification_tomorrow_dinner_autoordered"
+        android:summary="@string/notification_tomorrow_dinner_autoordered_summary"/>
+</PreferenceScreen>
