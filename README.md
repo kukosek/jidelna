@@ -1,7 +1,7 @@
 # Jidelna Slavicin
 
 <a href="https://github.com/kukosek/jidelna"><p align="center">
-<img height=100 src="https://raw.githubusercontent.com/kukosek/jidelna/main/rainbows/banner-en.png"/>
+<img height=100 src="https://raw.githubusercontent.com/kukosek/jidelna/main/rainbows/logo-background.png"/>
 
 </p></a>
 <p align="center">
