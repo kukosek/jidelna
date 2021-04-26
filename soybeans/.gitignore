@@ -1,0 +1,11 @@
+/venv/
+*.log
+*.swp
+login.html
+__pycache__
+.idea
+/*.conf
+start.sh
+test.py
+*_config.py
+/db/
