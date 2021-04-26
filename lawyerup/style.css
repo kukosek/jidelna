@@ -1,0 +1,31 @@
+body {
+	margin: 50px 10px 50px 5vw;
+	max-width: 1000px;
+	background-color: #ddd;
+	color: #313131;
+	font-family: 'Open Sans', sans-serif;
+}
+
+h1 {
+	font-family: 'Roboto', sans-serif;
+	color: #000;
+}
+
+li {
+	padding: 5px;
+}
+
+
+
+ol {
+  list-style: none;
+  counter-reset: my-awesome-counter;
+}
+ol li {
+  counter-increment: my-awesome-counter;
+}
+ol li::before {
+  content: counter(my-awesome-counter) ". ";
+  color: #8a0000;
+  font-weight: bold;
+}

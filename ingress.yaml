@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: jidelna-api-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/add-base-url: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "on"
+spec:
+  tls:
+  - hosts:
+    - jidelna.techbrick.cz
+    secretName: jidelna-tls
+  rules:
+  - host: jidelna.techbrick.cz
+    http:
+      paths:
+      - path: /api(/|$)(.*)
+        backend:
+          serviceName: jidelna-backend
+          servicePort: 80
+
+---
+
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: jidelna-frontend-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - jidelna.techbrick.cz
+    secretName: jidelna-tls
+  rules:
+  - host: jidelna.techbrick.cz
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: jidelna-frontend
+          servicePort: 80

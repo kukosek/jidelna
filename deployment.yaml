@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jidelna-backend
+  labels:
+    app: jidelna-backend
+  annotations:
+    keel.sh/policy: all
+    keel.sh/trigger: poll
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jidelna-backend
+  template:
+    metadata:
+      labels:
+        app: jidelna-backend
+    spec:
+      imagePullSecrets:
+      - name: registrypullsecret
+      containers:
+      - name: jidelna-backend
+        image: docker.dulik.net/jidelnaserver:latest
+        env:
+        - name: DB_CONF
+          value: "dbname=jidelna user=testuser host='10.109.56.60' password=jidelna"
+        - name: PORT
+          value: "8080"
+        - name: REQUEST_SHOW_ERRORS
+          value: "false"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: NUM_OF_WORKERS
+          value: "3"
+        - name: HEADLESS
+          value: "true"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: jidelna-backend
+spec:
+  selector:
+    app: jidelna-backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jidelna-frontend
+  labels:
+    app: jidelna-frontend
+  annotations:
+    keel.sh/policy: all
+    keel.sh/trigger: poll
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jidelna-frontend
+  template:
+    metadata:
+      labels:
+        app: jidelna-frontend
+    spec:
+      imagePullSecrets:
+      - name: registrypullsecret
+      containers:
+      - name: jidelna-frontend
+        image: docker.dulik.net/jidelnasite:latest
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jidelna-frontend
+spec:
+  selector:
+    app: jidelna-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

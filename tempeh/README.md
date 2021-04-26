@@ -1,0 +1,1 @@
+# Jidelna Next.js frontend
