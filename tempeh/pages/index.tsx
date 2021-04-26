@@ -26,6 +26,8 @@ class Home extends Component<WithRouterProps, HomeState> {
 				this.props.router.push("/login")
 			})
 			.catch((err) => {
+				if (err.message == "Unauthorized")
+					this.props.router.push("/login")
 			})
 	}
 	componentDidMount() {
@@ -41,8 +43,10 @@ class Home extends Component<WithRouterProps, HomeState> {
 				localStorage.setItem("menus", JSON.stringify(menus))
 			})
 			.catch((err) => {
-				console.log(err.message)
 				this.setState({isLoading: false})
+
+				if (err.message == "Unauthorized")
+					this.props.router.push("/login")
 			})
 	}
 	render() {
