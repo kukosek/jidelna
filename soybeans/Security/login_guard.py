@@ -33,7 +33,7 @@ class LoginGuard:
         return datetime.now().strftime(self.bad_attempt_timestamp_format)
 
     def get_id_by_ip(self, ip):
-        cur = self.db_holder.conn.cursor()
+        cur = self.db_holder.get_cursor()
         cur.execute(
             """SELECT id from """ + self.table_name + """ WHERE ip = %(ip)s;""",
             {"ip": ip})
@@ -79,7 +79,7 @@ class LoginGuard:
 
     # function is ip mailicious - returns true if the number of bad attempts in the DB
     def is_ip_malicious(self, ip):
-        cur = self.db_holder.conn.cursor()
+        cur = self.db_holder.get_cursor()
         row_id = self.get_id_by_ip(ip)
         if row_id is not None:
             cur.execute("""SELECT attempts, last_attempt from """ + self.table_name + """ WHERE id = %(id)s;""",

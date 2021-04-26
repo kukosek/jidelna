@@ -110,7 +110,11 @@ class DayOrder:
                     removed += 1
                     allergens.pop(i)
                 else:
-                    allergens[i] = int(''.join(i for i in allergens[i].split('.')[0] if i.isdigit()))
+                    try:
+                        allergens[i] = int(''.join(i for i in allergens[i].split('.')[0] if i.isdigit()))
+                    except ValueError:
+                        removed += 1
+                        allergens.pop(i)
 
             def append_dinner():
                 self.menu.append(
