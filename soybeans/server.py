@@ -139,12 +139,12 @@ class JidelnaSuperstructureServer(object):
                     user = possibly_existing_user
                     user.password = request_params["password"]
                 else:
-                    authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
+                    authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(128)])
                     user.authid = authid
 
                 user_manager.add_or_update_user(user)
 
-                cherrypy.response.cookie["authid"] = user.authid
+                cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure'
                 return "ok"
             else:
                 raise cherrypy.HTTPError(status=403, message="you messed up. contact me")

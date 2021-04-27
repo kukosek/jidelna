@@ -12,7 +12,7 @@ export async function login(credentials: LoginCreds) {
 		}
 	).then(response => {
 		if (!response.ok) {
-			throw new Error(response.statusText)
+			throw new Error(response.status.toString())
 		}
 	})
 }
@@ -25,7 +25,7 @@ export async function logout() {
 		}
 	).then(response => {
 		if (!response.ok) {
-			throw new Error(response.statusText)
+			throw new Error(response.status.toString())
 		}
 	})
 }
@@ -39,7 +39,7 @@ export async function getMenu(): Promise<CantryMenu[]> {
 	)
 		.then(response => {
 			if (!response.ok) {
-				throw new Error(response.statusText)
+				throw new Error(response.status.toString())
 			}
 			return response.json() as Promise<CantryMenu[]>
 		})
@@ -49,7 +49,7 @@ export async function getSettings(): Promise<UserSettings> {
 	return fetch(api + "/settings", {credentials: "include"})
 		.then(response => {
 			if (!response.ok) {
-				throw new Error(response.statusText)
+				throw new Error(response.status.toString())
 			}
 			return response.json() as Promise<UserSettings>
 		})

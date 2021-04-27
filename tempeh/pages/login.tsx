@@ -1,6 +1,6 @@
 import {withRouter, NextRouter} from 'next/router'
 import Head from 'next/head'
-import React, {ChangeEvent, Component, MouseEventHandler} from 'react';
+import React, {ChangeEvent, Component, KeyboardEventHandler, MouseEventHandler} from 'react';
 import {LoginCreds, WithRouterProps} from "../data/types"
 import {login, getSettings} from "../data/client"
 
@@ -22,6 +22,12 @@ class Home extends Component<WithRouterProps, LoginState>{
 			},
 			errorMessage: "",
 			error: false
+		}
+	}
+
+	keyPressed = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		if (event.key == "Enter") {
+			this.login()
 		}
 	}
 
@@ -51,10 +57,14 @@ class Home extends Component<WithRouterProps, LoginState>{
 					this.loginSuccess()
 				})
 				.catch((err: Error) => {
+					var errorMsg = err.message
+					if (errorMsg == "401") {
+						errorMsg = "Špatné heslo nebo jméno."
+					}
 					this.setState({
 						isLoading: false,
 						error: true,
-						errorMessage: err.message
+						errorMessage: errorMsg
 					})
 				})
 		}
@@ -76,7 +86,7 @@ class Home extends Component<WithRouterProps, LoginState>{
 					<link rel="icon" href="/favicon.ico" />
 				</Head>
 				<main >
-					<div className="flex h-screen w-screen">
+					<div onKeyPress={this.keyPressed} className="flex h-screen w-screen">
 						<div className="w-80 rounded-md m-auto bg-white p-5">
 							<h1 className="flex-auto text-xl font-semibold">
 								Jídelna Slavičín

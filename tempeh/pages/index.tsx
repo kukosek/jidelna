@@ -26,7 +26,7 @@ class Home extends Component<WithRouterProps, HomeState> {
 				this.props.router.push("/login")
 			})
 			.catch((err) => {
-				if (err.message == "Unauthorized")
+				if (err.message == "401")
 					this.props.router.push("/login")
 			})
 	}
@@ -42,10 +42,9 @@ class Home extends Component<WithRouterProps, HomeState> {
 				this.setState({isLoading: false})
 				localStorage.setItem("menus", JSON.stringify(menus))
 			})
-			.catch((err) => {
+			.catch((err: Error) => {
 				this.setState({isLoading: false})
-
-				if (err.message == "Unauthorized")
+				if (err.message == "401")
 					this.props.router.push("/login")
 			})
 	}
