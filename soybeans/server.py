@@ -32,6 +32,11 @@ import schedule
 
 from Store.DbHolder import DbHolder
 
+#RFC date for expiring cookies
+from wsgiref.handlers import format_date_time
+from datetime import datetime
+from time import mktime
+
 def CORS():
     cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
@@ -156,8 +161,12 @@ class JidelnaSuperstructureServer(object):
         authid = self.get_authid()
         user = user_manager.get_user_by_authid(authid)
         self.user_validity_check(user, authid)
-        cherrypy.response.cookie["authid"] = authid
-        cherrypy.response.cookie["authid"]["expires"] = 0
+
+        now = datetime.now()
+        stamp = mktime(now.timetuple())
+        expires = format_date_time(stamp) #--> Wed, 22 Oct 2008 10:52:40 GMT
+
+        cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure; expires='+expires
         if "delete" in params:
             if params["delete"] == "true":
                 user_manager.delete_user(user)
