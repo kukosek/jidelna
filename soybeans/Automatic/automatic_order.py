@@ -1,10 +1,14 @@
+from Store.autoorder_cancel_dates import AutoorderCancelDate
 import cherrypy
+from peewee import DoesNotExist, PostgresqlDatabase
 
 from Work.job import Job
 from Work.jobs import Jobs
 from Work.exceptions import *
 from Automatic.dinner_ranker import DinnerRanker
 from Automatic.dinner_to_order import DinnerToOrder
+
+from Store.user import User
 
 from datetime import date, timedelta, datetime
 
@@ -17,12 +21,19 @@ result_error = 3
 
 
 class AutomaticOrderManager:
-    def __init__(self, distributor, user_manager):
-        self.user_manager = user_manager
+    def __init__(self, distributor, db: PostgresqlDatabase):
+        self.db = db
         self.distributor = distributor
 
     def automatic_orders_for_user_and_day(self, user, desired_date):
-        if user.autoorder_cancellation_dates is None or desired_date not in user.autoorder_cancellation_dates:
+        try:
+            cancel_date : AutoorderCancelDate= AutoorderCancelDate.get(
+                    AutoorderCancelDate.user == user,
+                    AutoorderCancelDate.cancel_date == desired_date
+                )
+            cancel_date.delete_instance()
+
+        except DoesNotExist:
             menu = self.distributor.distribute(Job(Jobs.GET_DAYMENU, user, desired_date))
             if isinstance(menu, Exception):
                 if "Bad credentials" in str(menu):
@@ -42,22 +53,25 @@ class AutomaticOrderManager:
                     break
             if not dinner_already_ordered:
                 settings = user.autoorder_settings
-                menu_to_order = DinnerToOrder(None, desired_date)
+                menu_to_order = DinnerToOrder(-1, desired_date)
                 menu_successfully_ordered = False
+
                 while menu_successfully_ordered is False and len(menu) > 0:
                     if "random" in settings and settings["random"]:
-                        menu_to_order.number = random.randint(1, len(menu))
+                        menu_to_order.menuNumber = random.randint(1, len(menu))
                     else:
-                        menu_to_order.number = DinnerRanker(settings).get_best_dinner_number(menu)
-                    if menu_to_order.number is not None:
+                        menu_to_order.menuNumber = DinnerRanker(settings).get_best_dinner_number(menu)
+
+                    if menu_to_order.menuNumber != -1:
                         result = self.distributor.distribute(
-                            Job(Jobs.ORDER_MENU, user, menu_to_order.date, menu_to_order.number))
+                            Job(Jobs.ORDER_MENU, user, menu_to_order.date, menu_to_order.menuNumber))
+
                         if isinstance(result, DinnerOrderingClosedException):
                             # Can't order this dinner, try to order some other one
 
                             # Remove the unavailable dinner from our menu
                             for dinner in menu:
-                                if dinner.menu_number == menu_to_order.number:
+                                if dinner.menu_number == menu_to_order.menuNumber:
                                     menu.remove(dinner)
                             # skip to next loop
                         elif isinstance(result, Exception):
@@ -67,14 +81,13 @@ class AutomaticOrderManager:
                             menu_successfully_ordered = True
                     else:
                         menu_successfully_ordered = True
-        else:
-            user.autoorder_cancellation_dates.pop(user.autoorder_cancellation_dates.indexOf(desired_date))
-            self.user_manager.add_or_update_user(user)
+
 
     # Automatically orders something for every user that has autoorder enabled and didn't already order something
     def do_automatic_orders(self):
+        self.db.connect()
         cherrypy.log("Starting autoorder")
-        autoorder_users = self.user_manager.get_autoorder_users()
+        autoorder_users = User.select(User.autoorder_enable == True )
         num_of_users = len(autoorder_users)
         num_of_errors = 0
 

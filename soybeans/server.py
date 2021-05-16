@@ -8,12 +8,18 @@ from Work.browser_work_distributor import BrowserWorkDistributor
 from Work.job import Job
 from Work.jobs import Jobs
 from Work.exceptions import *
-from Automatic.automatic_order import AutomaticOrderManager
-from Store.userStore.user_manager import UserManager
-from Store.userStore.user import User
-from Security.login_guard import LoginGuard
 
-import psycopg2
+from Automatic.automatic_order import AutomaticOrderManager
+
+from Store.get_db import get_db
+from Store.user import User
+from Store.saved_dinner import SavedDinner
+from Store.login_attempts import LoginAttempts
+from Store.review import Review
+from Store.dinner_serving_dates import DinnerServingDates
+from Store.autoorder_cancel_dates import AutoorderCancelDate
+
+import Security.login_guard as login_guard
 
 from datetime import datetime
 
@@ -30,18 +36,23 @@ load_dotenv()
 
 import schedule
 
-from Store.DbHolder import DbHolder
 
 #RFC date for expiring cookies
 from wsgiref.handlers import format_date_time
 from datetime import datetime
 from time import mktime
 
+from peewee import DoesNotExist, PostgresqlDatabase
+
 def CORS():
     cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
 if __name__ == '__main__':
-    db_holder = DbHolder()
+    db: PostgresqlDatabase = get_db()
+    db.connect()
+
+    db.create_tables([User, LoginAttempts, SavedDinner, Review, AutoorderCancelDate])
+
     try:
         num_of_workers = os.getenv('NUM_OF_WORKERS')
         if num_of_workers == None:
@@ -52,11 +63,17 @@ if __name__ == '__main__':
         print("No NUM_OF_WORKERS env variable, defaulting to 1.")
         num_of_workers = 1
     distributor = BrowserWorkDistributor(num_of_workers)
-    user_manager = UserManager(db_holder)
-    login_guard = LoginGuard(db_holder)
-    autoorder_manager = AutomaticOrderManager(distributor, user_manager)
+    autoorder_manager = AutomaticOrderManager(distributor, db)
     schedule.every().day.at("06:19").do(autoorder_manager.do_automatic_orders)
 
+def get_user_by_authid(authid) -> User:
+    try:
+        return User.get(User.authid == authid)
+    except DoesNotExist:
+        print('does not exist')
+        cherrypy.response.cookie["authid"] = authid
+        cherrypy.response.cookie["authid"]["expires"] = 0
+        raise cherrypy.HTTPError(status=401, message="Bad authid")
 
 class JidelnaSuperstructureServer(object):
     def get_request_origin_ip(self):
@@ -91,12 +108,6 @@ class JidelnaSuperstructureServer(object):
         else:
             login_guard.notify_login_success(self.get_request_origin_ip())
 
-    def user_validity_check(self, user, authid):
-        if user is None:
-            cherrypy.response.cookie["authid"] = authid
-            cherrypy.response.cookie["authid"]["expires"] = 0
-            raise cherrypy.HTTPError(status=401, message="Bad authid")
-
     def get_authid(self):
         try:
             return cherrypy.request.cookie["authid"].value
@@ -113,8 +124,7 @@ class JidelnaSuperstructureServer(object):
             if not login_guard.is_ip_malicious(self.get_request_origin_ip()):
                 if "authid" in cherrypy.request.cookie:
                     authid = self.get_authid()
-                    user = user_manager.get_user_by_authid(authid)
-                    self.user_validity_check(user, authid)
+                    user = get_user_by_authid(authid)
 
                     result = distributor.distribute(Job(Jobs.LOGIN, user))
                     if isinstance(result, Exception):
@@ -134,20 +144,28 @@ class JidelnaSuperstructureServer(object):
                 if "username" not in request_params or "password" not in request_params:
                     raise cherrypy.HTTPError(status=400,
                                              message="Bad request: you must specify username and password in request body as json")
-                user = User(None, request_params["username"], request_params["password"], None,
-                            None, None, None, None, None)
+                user = User(
+                        username=request_params["username"],
+                        password=request_params["password"],
+                        authid="",
+                        autoorder_enable=False,
+                        autoorder_settings="{}",
+                        autoorder_request_settings="{}",
+                        register_datetime=datetime.now()
+                    )
                 result = distributor.distribute(Job(Jobs.LOGIN, user))
                 self.login_exception_check(result)
 
-                possibly_existing_user = user_manager.get_user_by_username(request_params["username"])
-                if possibly_existing_user is not None:
+                try:
+                    possibly_existing_user: User = User.get(User.username == request_params["username"])
                     user = possibly_existing_user
                     user.password = request_params["password"]
-                else:
+                except DoesNotExist:
                     authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(128)])
                     user.authid = authid
 
-                user_manager.add_or_update_user(user)
+                print(user.username)
+                user.save()
 
                 cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure'
                 return "ok"
@@ -159,8 +177,7 @@ class JidelnaSuperstructureServer(object):
     @cherrypy.expose
     def logout(self, **params):
         authid = self.get_authid()
-        user = user_manager.get_user_by_authid(authid)
-        self.user_validity_check(user, authid)
+        user = get_user_by_authid(authid)
 
         now = datetime.now()
         stamp = mktime(now.timetuple())
@@ -169,15 +186,16 @@ class JidelnaSuperstructureServer(object):
         cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure; expires='+expires
         if "delete" in params:
             if params["delete"] == "true":
-                user_manager.delete_user(user)
+                user.delete_instance()
                 return "logged_out_and_deleted"
         return "logged_out"
 
     @cherrypy.expose
     def menu(self, **params):
         authid = self.get_authid()
-        user = user_manager.get_user_by_authid(authid)
-        self.user_validity_check(user, authid)
+        user : User = get_user_by_authid(authid)
+        print("menu: Jmeno:", user.username, "Heslo: ", user.password)
+        print(user.username[0])
 
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -200,9 +218,12 @@ class JidelnaSuperstructureServer(object):
                 if user.autoorder_enable:
                     def daymenu_correction(daymenu_to_correct):
                         will_autoorder = True
-                        if user.autoorder_cancellation_dates is not None:
-                            if daymenu_to_correct.date in user.autoorder_cancellation_dates:
-                                will_autoorder = False
+
+                        try:
+                            AutoorderCancelDate.get(user==user, cancel_date==daymenu_to_correct.date)
+                            will_autoorder = False
+                        except DoesNotExist:
+                            pass
                         unavailable_menus = 0
                         for menu in daymenu_to_correct.menus:
                             if menu.status == "ordered" or menu.status == "ordering" or menu.status == "ordered closed":
@@ -241,9 +262,12 @@ class JidelnaSuperstructureServer(object):
                 if action == "order":
                     result = distributor.distribute(
                         Job(Jobs.ORDER_MENU, user, order_date, request_params["menuNumber"]))
-                    if order_date in user.autoorder_cancellation_dates:
-                        user.autoorder_cancellation_dates.remove(order_date)
-                        user_manager.add_or_update_user(user)
+                    try:
+                        cancel_date = AutoorderCancelDate.get(AutoorderCancelDate.user==user,AutoorderCancelDate.cancel_date==order_date)
+                        cancel_date.delete_instance()
+                    except DoesNotExist:
+                        pass
+
                 elif action == "cancel":
                     menus_cancel_day = distributor.distribute(Job(Jobs.GET_DAYMENU, user, order_date))
                     if isinstance(menus_cancel_day, Exception):
@@ -258,9 +282,12 @@ class JidelnaSuperstructureServer(object):
                         result = distributor.distribute(
                             Job(Jobs.CANCEL_ORDER, user, order_date, request_params["menuNumber"]))
                     else:
-                        if user.autoorder_enable and order_date not in user.autoorder_cancellation_dates:
-                            user.autoorder_cancellation_dates.append(order_date),
-                            user_manager.add_or_update_user(user)
+                        try:
+                            AutoorderCancelDate.get(AutoorderCancelDate.user == user, AutoorderCancelDate.cancel_date == order_date)
+                        except DoesNotExist:
+                            if user.autoorder_enable:
+                                cancel_date = AutoorderCancelDate(AutoorderCancelDate.user==user, AutoorderCancelDate.cancel_date==order_date)
+                                cancel_date.save()
                 if isinstance(result, Exception):
                     self.login_exception_check(result)
                     if isinstance(result, ValueError):
@@ -281,8 +308,8 @@ class JidelnaSuperstructureServer(object):
     @cherrypy.expose
     def settings(self):
         authid = self.get_authid()
-        user = user_manager.get_user_by_authid(authid)
-        self.user_validity_check(user, authid)
+        user = get_user_by_authid(authid)
+
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
 
@@ -297,7 +324,7 @@ class JidelnaSuperstructureServer(object):
                         user.autoorder_enable = value["enable"]
                         user.autoorder_settings = value["settings"]
                         user.autoorder_request_settings = value["requestSettings"]
-                        user_manager.add_or_update_user(user)
+                        user.save()
                     else:
                         raise cherrypy.HTTPError(status=400, message="Unknown setting: " + key)
                 return "ok"
@@ -335,10 +362,8 @@ class ThreadController(cherrypy.process.plugins.SimplePlugin):
 
 if __name__ == '__main__':
     def finish():
-        if conn:
-            cur.close()
-            conn.close()
-            logging.info("PostgreSQL connection is closed")
+        db.close()
+        logging.info("PostgreSQL connection is closed")
         try:
             distributor.close_all()  # test
         except Exception:

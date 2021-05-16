@@ -43,6 +43,7 @@ class Worker:
             job = self.callQueue.pop(0)  # removes first job from array and returns it
 
             def login_for_job():
+                print(job.user.username)
                 self.handler.login(job.user.username, job.user.password)
                 self.loggedUser = job.user
 

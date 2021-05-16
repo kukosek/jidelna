@@ -1,12 +1,13 @@
-from peewee import BooleanField, DateTimeField, Model, CharField, TextField
+from peewee import BooleanField, DateTimeField, TextField
 from Store.base_model import BaseModel
 
 class User(BaseModel):
-    username = CharField(unique=True),
     password = TextField()
-    authid = TextField()
+    username = TextField(),
+    auth_id = TextField()
     autoorder_enable = BooleanField()
     autoorder_settings = TextField()
     autoorder_request_settings = TextField()
-    autoorder_cancellation_dates = TextField()
     register_datetime = DateTimeField()
+    class Meta:
+        table_name = 'user_profile'
