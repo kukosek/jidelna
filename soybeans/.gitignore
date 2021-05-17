@@ -1,4 +1,6 @@
 /venv/
+.vim/coc-settings.json
+pyrightconfig.json
 *.log
 *.swp
 login.html
