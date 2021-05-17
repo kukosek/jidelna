@@ -3,8 +3,8 @@ from Store.base_model import BaseModel
 
 class User(BaseModel):
     password = TextField()
-    username = TextField(),
-    auth_id = TextField()
+    username = TextField()
+    authid = TextField()
     autoorder_enable = BooleanField()
     autoorder_settings = TextField()
     autoorder_request_settings = TextField()

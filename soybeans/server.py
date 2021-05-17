@@ -44,6 +44,8 @@ from time import mktime
 
 from peewee import DoesNotExist, PostgresqlDatabase
 
+AUTHID_LENGTH = 128
+
 def CORS():
     cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
@@ -70,7 +72,6 @@ def get_user_by_authid(authid) -> User:
     try:
         return User.get(User.authid == authid)
     except DoesNotExist:
-        print('does not exist')
         cherrypy.response.cookie["authid"] = authid
         cherrypy.response.cookie["authid"]["expires"] = 0
         raise cherrypy.HTTPError(status=401, message="Bad authid")
@@ -161,13 +162,16 @@ class JidelnaSuperstructureServer(object):
                     user = possibly_existing_user
                     user.password = request_params["password"]
                 except DoesNotExist:
-                    authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(128)])
+                    authid = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(AUTHID_LENGTH)])
                     user.authid = authid
 
-                print(user.username)
                 user.save()
 
-                cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure'
+                secure_cookie = False
+
+                cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)
+                if secure_cookie:
+                    cherrypy.response.headers['Set-Cookie'] += '; SameSite=None; Secure'
                 return "ok"
             else:
                 raise cherrypy.HTTPError(status=403, message="you messed up. contact me")
@@ -194,8 +198,6 @@ class JidelnaSuperstructureServer(object):
     def menu(self, **params):
         authid = self.get_authid()
         user : User = get_user_by_authid(authid)
-        print("menu: Jmeno:", user.username, "Heslo: ", user.password)
-        print(user.username[0])
 
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -220,7 +222,9 @@ class JidelnaSuperstructureServer(object):
                         will_autoorder = True
 
                         try:
-                            AutoorderCancelDate.get(user==user, cancel_date==daymenu_to_correct.date)
+                            AutoorderCancelDate.get(
+                                    AutoorderCancelDate.user==user,
+                                    AutoorderCancelDate.cancel_date==daymenu_to_correct.date)
                             will_autoorder = False
                         except DoesNotExist:
                             pass
@@ -234,7 +238,7 @@ class JidelnaSuperstructureServer(object):
                             will_autoorder = False
                         if will_autoorder:
                             menu_num_to_order = DinnerRanker(
-                                user.autoorder_settings).get_best_dinner_number(
+                                json.loads(user.autoorder_settings)).get_best_dinner_number(
                                 daymenu_to_correct.menus)
                             for menu in daymenu_to_correct.menus:
                                 if menu.menu_number == menu_num_to_order:
@@ -313,8 +317,10 @@ class JidelnaSuperstructureServer(object):
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
 
-            user_settings = {"autoorder": {"enable": user.autoorder_enable, "settings": user.autoorder_settings,
-                                           "requestSettings": user.autoorder_request_settings}}
+            user_settings = {"autoorder": {
+                "enable": user.autoorder_enable,
+                "settings": json.loads(user.autoorder_settings),
+                "requestSettings": json.loads(user.autoorder_request_settings)}}
             return json.dumps(user_settings).encode('utf8')
         elif cherrypy.request.method == "POST":
             settings = self.get_request_params()
@@ -322,8 +328,8 @@ class JidelnaSuperstructureServer(object):
                 for key, value in settings.items():
                     if key == "autoorder":
                         user.autoorder_enable = value["enable"]
-                        user.autoorder_settings = value["settings"]
-                        user.autoorder_request_settings = value["requestSettings"]
+                        user.autoorder_settings = json.dumps(value["settings"])
+                        user.autoorder_request_settings = json.dumps(value["requestSettings"])
                         user.save()
                     else:
                         raise cherrypy.HTTPError(status=400, message="Unknown setting: " + key)

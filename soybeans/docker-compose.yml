@@ -30,6 +30,6 @@ services:
       - NUM_OF_WORKERS=1
       - HEADLESS=true
     ports:
-      - 8080:8080
+      - 9090:8080
     depends_on:
       - postgres

@@ -43,7 +43,6 @@ class Worker:
             job = self.callQueue.pop(0)  # removes first job from array and returns it
 
             def login_for_job():
-                print(job.user.username)
                 self.handler.login(job.user.username, job.user.password)
                 self.loggedUser = job.user
 
@@ -58,7 +57,6 @@ class Worker:
                     last_request_elapsed_seconds = (datetime.now() - self.lastUsedTime).total_seconds()
                     if self.loggedUser is None or job.user.username != self.loggedUser.username or last_request_elapsed_seconds > 60.0:
                         login_for_job()
-                        print("loggin in")
                     if job.type == Jobs.SELECT_DATE:
                         self.handler.select_date(job.arguments[0])
                     elif job.type == Jobs.ORDER_MENU:
