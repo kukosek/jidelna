@@ -9,6 +9,7 @@ class DayMenu:
         self.menus = menus
 
     def from_dict(self, dictionary):
+        print("cs")
         if isinstance(dictionary["date"], datetime.date):
             self.date = dictionary["date"]
         else:
@@ -20,7 +21,7 @@ class DayMenu:
     def to_dict(self):
         menu_array = []
         for menu in self.menus:
-            menu_array.append(menu.to_dict())
+            menu_array.append(menu.__dict__)
         return {
             "date": self.date,
             "menus": menu_array

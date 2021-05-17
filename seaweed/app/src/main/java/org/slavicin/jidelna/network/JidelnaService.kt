@@ -11,6 +11,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.slavicin.jidelna.consts.COOKIE_SET_KEY
 import org.slavicin.jidelna.data.CantryMenu
 import org.slavicin.jidelna.data.UserSetting
+import org.slavicin.jidelna.data.WeekMenu
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
@@ -43,10 +44,10 @@ public interface RestApi {
     fun logout(@Query("delete") delete: Boolean): Call<Void>
 
     @GET("menu")
-    fun getMenus(): Call<List<CantryMenu>>
+    fun getMenus(): Call<WeekMenu>
 
     @GET("menu")
-    fun getMenu(@Query("date") date: String): Call<CantryMenu> //accepts date in iso string
+    fun getMenu(@Query("date") date: String): Call<WeekMenu> //accepts date in iso string
 
     @POST("menu")
     fun requestDinner(@Body params: DinnerRequestParams): Call<Void>

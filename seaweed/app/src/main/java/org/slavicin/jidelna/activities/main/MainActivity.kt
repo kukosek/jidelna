@@ -4,17 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-import androidx.core.content.ContextCompat
-import androidx.core.content.edit
-import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -32,6 +26,7 @@ import org.slavicin.jidelna.activities.logout
 import org.slavicin.jidelna.activities.settings.SettingsActivity
 import org.slavicin.jidelna.consts.*
 import org.slavicin.jidelna.data.CantryMenu
+import org.slavicin.jidelna.data.WeekMenu
 import org.slavicin.jidelna.network.RestApi
 import org.slavicin.jidelna.network.ServiceBuilder
 import org.slavicin.jidelna.utlis.setAppTheme
@@ -163,15 +158,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun reloadMenu(){
         rootLayout.isRefreshing = true;
-        val callAsync : Call<List<CantryMenu>> = service.getMenus()
-        callAsync.enqueue(object : Callback<List<CantryMenu>?> {
+        val callAsync  = service.getMenus()
+        callAsync.enqueue(object : Callback<WeekMenu?> {
             override fun onResponse(
-                call: Call<List<CantryMenu>?>,
-                response: Response<List<CantryMenu>?>
+                call: Call<WeekMenu?>,
+                response: Response<WeekMenu?>
             ) {
                 if (response.isSuccessful) {
+                    val message = resources.getString(R.string.credit) + response.body()?.creditLeft.toString()
+                    Snackbar.make(
+                        rootLayout,
+                        message,
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+
                     menus.clear()
-                    val responseMenus : List<CantryMenu> = response.body()!!
+                    val responseMenus : List<CantryMenu> = response.body()!!.daymenus
                     for (menu in responseMenus) {
                         menus.add(MenuRecyclerviewItem(menu, null))
                     }
@@ -199,7 +201,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onFailure(
-                call: Call<List<CantryMenu>?>,
+                call: Call<WeekMenu?>,
                 t: Throwable
             ) {
                 rootLayout.isRefreshing = false

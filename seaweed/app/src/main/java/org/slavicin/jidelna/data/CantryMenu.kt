@@ -10,3 +10,8 @@ data class Dinner(
 data class CantryMenu(
     val date: String, val menus: List<Dinner>
 )
+
+data class WeekMenu(
+    val daymenus: List<CantryMenu>,
+    val creditLeft: Int
+)

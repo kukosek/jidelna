@@ -195,6 +195,7 @@ class DayOrder:
                 raise DinnerOrderingClosedException("Too late. Not accepting orders now")
 
 
+
 def wait_for_page_load(browser, elemid=None):
     if elemid is None:
         old_page = browser.find_element_by_tag_name('html')
@@ -249,6 +250,10 @@ class JidelnaWebappHandler:
 
     def get_menu(self):
         return self.dayorder.menu
+
+    def get_credit(self) -> float:
+        strval = self.browser.find_element_by_id("lblCreditInfo").text
+        return float(strval.replace(',', '.'))
 
     def order_menu(self, menu_number):
         self.dayorder.order(menu_number)

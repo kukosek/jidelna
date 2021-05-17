@@ -212,6 +212,7 @@ class JidelnaSuperstructureServer(object):
                 daymenus = distributor.distribute(Job(Jobs.GET_MENU, user))
             else:
                 daymenus = distributor.distribute(Job(Jobs.GET_DAYMENU, user, desired_date))
+            print(daymenus)
             if isinstance(daymenus, Exception):
                 self.login_exception_check(daymenus)
                 cherrypy.log.error("/menu unknown exception:" + str(daymenus))
@@ -244,19 +245,9 @@ class JidelnaSuperstructureServer(object):
                                 if menu.menu_number == menu_num_to_order:
                                     menu.status = "autoordered"
 
-                    if isinstance(daymenus, list):
-                        for daymenu in daymenus:
-                            daymenu_correction(daymenu)
-                    else:
-                        daymenu_correction(daymenus)
-                if desired_date is None:
-                    daymenus_dict = daymenus
-                    for i in range(len(daymenus_dict)):
-                        daymenus_dict[i] = daymenus_dict[i].to_dict()
-                        daymenus_dict[i]["date"] = daymenus_dict[i]["date"].isoformat()
-                    return json.dumps(daymenus_dict).encode('utf8')
-                else:
-                    return daymenus.to_string().encode('utf8')
+                    for daymenu in daymenus:
+                        daymenu_correction(daymenu)
+                return daymenus.to_string().encode('utf8')
         elif cherrypy.request.method == "POST":
             request_params = self.get_request_params()
             try:
@@ -339,6 +330,14 @@ class JidelnaSuperstructureServer(object):
             except ValueError as e:
                 cherrypy.HTTPError(status=400, message=str(e))
 
+def _db_connect():
+    if not db.is_connection_usable():
+        db.connect()
+
+def _db_close():
+    if not db.is_closed():
+        db.close()
+
 
 class RunScheduler:
     def __init__(self):
@@ -368,7 +367,7 @@ class ThreadController(cherrypy.process.plugins.SimplePlugin):
 
 if __name__ == '__main__':
     def finish():
-        db.close()
+        _db_close()
         logging.info("PostgreSQL connection is closed")
         try:
             distributor.close_all()  # test
@@ -395,6 +394,7 @@ if __name__ == '__main__':
         cherrypy.config.update(config)
         cherrypy_cors.install()
         cherrypy.tools.CORS = cherrypy.Tool("before_finalize", CORS)
+        cherrypy.engine.subscribe('before_request', _db_connect)
         cherrypy.quickstart(JidelnaSuperstructureServer())
     except Exception:
         finish()

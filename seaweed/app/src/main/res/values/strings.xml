@@ -88,5 +88,6 @@
     <string name="autoorder_request_order_one_by_one_enabled">We will always send the order request to the cantry x days before the day of the dinner.</string>
     <string name="autoorder_request_order_one_by_one_disabled">We\'ll order dinners for all days when the menu is available.</string>
     <string name="autoorder_request_days_in_advance">When to order</string>
+    <string name="credit">"Credit: "</string>
 
 </resources>

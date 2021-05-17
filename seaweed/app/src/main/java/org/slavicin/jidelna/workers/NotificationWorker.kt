@@ -19,6 +19,7 @@ import org.slavicin.jidelna.activities.settings.dinner_notification_channel_id
 import org.slavicin.jidelna.consts.*
 import org.slavicin.jidelna.data.CantryMenu
 import org.slavicin.jidelna.data.Dinner
+import org.slavicin.jidelna.data.WeekMenu
 import org.slavicin.jidelna.network.ServiceBuilder
 import retrofit2.Call
 import retrofit2.Response
@@ -91,11 +92,11 @@ class NotificationWorker(val context: Context, params: WorkerParameters) : Worke
         var responseMenu: CantryMenu? = null
         if (hour in 6..13) {
 
-            val call: Call<CantryMenu> = service.getMenu(dateFormat.format(targetDateTime.time))
+            val call: Call<WeekMenu> = service.getMenu(dateFormat.format(targetDateTime.time))
             try {
-                val response: Response<CantryMenu> = call.execute()
+                val response: Response<WeekMenu> = call.execute()
                 if (response.isSuccessful) {
-                    responseMenu = response.body()!!
+                    responseMenu = response.body()!!.daymenus[0]
                     val todayMenu = responseMenu
                     if (enabledNotifsSameAsBefore && todayMenu.hashCode() == lastMenu.hashCode()){
                         notificationWouldBeSame = true
@@ -152,11 +153,11 @@ class NotificationWorker(val context: Context, params: WorkerParameters) : Worke
 
         }else if (hour in 18..23){
            targetDateTime.add(Calendar.DATE, 1)
-            val call: Call<CantryMenu> = service.getMenu(dateFormat.format(targetDateTime.time))
+            val call: Call<WeekMenu> = service.getMenu(dateFormat.format(targetDateTime.time))
             try {
-                val response: Response<CantryMenu> = call.execute()
+                val response: Response<WeekMenu> = call.execute()
                 if (response.isSuccessful) {
-                    responseMenu = response.body()!!
+                    responseMenu = response.body()!!.daymenus[0]
                     val tomorrowMenu = responseMenu
                     if (enabledNotifsSameAsBefore && tomorrowMenu.hashCode() == lastMenu.hashCode()){
                         notificationWouldBeSame = true
