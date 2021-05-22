@@ -1,12 +1,13 @@
 import json
 import datetime
 from Work.orderable_dinner import OrderableDinner
+from typing import List
 
 
 class DayMenu:
-    def __init__(self, date=None, menus=None):
+    def __init__(self, date=None, menus=[]):
         self.date = date
-        self.menus = menus
+        self.menus: List[OrderableDinner] = menus
 
     def from_dict(self, dictionary):
         print("cs")
@@ -21,7 +22,7 @@ class DayMenu:
     def to_dict(self):
         menu_array = []
         for menu in self.menus:
-            menu_array.append(menu.__dict__)
+            menu_array.append(menu.to_dict())
         return {
             "date": self.date,
             "menus": menu_array

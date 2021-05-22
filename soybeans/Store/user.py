@@ -4,6 +4,7 @@ from Store.base_model import BaseModel
 class User(BaseModel):
     password = TextField()
     username = TextField()
+    name = TextField()
     authid = TextField()
     autoorder_enable = BooleanField()
     autoorder_settings = TextField()

@@ -89,5 +89,17 @@
     <string name="autoorder_request_order_one_by_one_disabled">We\'ll order dinners for all days when the menu is available.</string>
     <string name="autoorder_request_days_in_advance">When to order</string>
     <string name="credit">"Credit: "</string>
+    <string name="see_all">See all comments</string>
+    <string name="title_activity_reviews">Reviews</string>
+    <string name="write_review">Write review</string>
+    <string name="seconds_ago">%1$d seconds ago</string>
+    <string name="minutes_ago">%1$d minutes ago</string>
+    <string name="hours_ago">%1$d hours ago</string>
+    <string name="days_ago">%1$d days ago</string>
+    <string name="message">Your review</string>
+    <string name="title_activity_reviews_write">Write a review</string>
+    <string name="no_reviews_yet">No reviews yet. Be the first to write one.</string>
+    <string name="must_order_to_write_review">You must order a dinner to write a review</string>
+    <!-- Strings used for fragments for navigation -->
 
 </resources>

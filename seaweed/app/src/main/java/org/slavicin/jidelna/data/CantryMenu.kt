@@ -5,7 +5,9 @@ data class Dinner(
     val menuNumber: Int,
     val name: String,
     val allergens: List<Int>,
-    var status: String
+    var status: String,
+    val dinnerid: Int,
+    val numOfReviews: Int
 )
 data class CantryMenu(
     val date: String, val menus: List<Dinner>

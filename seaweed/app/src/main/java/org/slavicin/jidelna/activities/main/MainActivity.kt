@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity() {
                 reloadMenu()
             })
 
-            menusRecyclerView = findViewById(R.id.menus)
+            menusRecyclerView = findViewById(R.id.reviews)
             menuItemAdapter = MenuItemAdapter(menus, service, rootLayout, loginIntent,
                 this
             )

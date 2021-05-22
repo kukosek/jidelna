@@ -9,7 +9,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import org.slavicin.jidelna.consts.COOKIE_SET_KEY
-import org.slavicin.jidelna.data.CantryMenu
+import org.slavicin.jidelna.data.ReviewList
 import org.slavicin.jidelna.data.UserSetting
 import org.slavicin.jidelna.data.WeekMenu
 import retrofit2.Call
@@ -35,6 +35,23 @@ data class DinnerRequestParams(
     @SerializedName("menuNumber") val menuNumber: Int
 )
 
+data class ReviewParams(
+    @SerializedName("rating") val rating: Float,
+    @SerializedName("message") val message: String
+)
+
+data class PostReviewParams(
+    @SerializedName("review") val review: ReviewParams
+)
+
+data class ReviewScore(
+    @SerializedName("userScore") val userScore: Double
+)
+
+data class PostReviewScoreParams(
+    @SerializedName("score") val reviewScore: ReviewScore
+)
+
 public interface RestApi {
     @Headers("Content-Type: application/json")
     @POST("login")
@@ -48,6 +65,18 @@ public interface RestApi {
 
     @GET("menu")
     fun getMenu(@Query("date") date: String): Call<WeekMenu> //accepts date in iso string
+
+    @GET("reviews")
+    fun getReviews(@Query("dinnerid") dinnerids: ArrayList<Int>): Call<ReviewList> //accepts date in iso string
+
+    @GET("reviews")
+    fun getUserReviews(@Query("dinnerid") dinnerids: ArrayList<Int>, @Query("me") me: Boolean): Call<ReviewList> //accepts date in iso string
+
+    @POST("reviews")
+    fun postReview(@Query("dinnerid") dinnerids: ArrayList<Int>, @Body params: PostReviewParams): Call<Void>
+
+    @POST("reviews")
+    fun postReviewScore(@Query("reviewid") reviewid:Int, @Body params: PostReviewScoreParams): Call<Void>
 
     @POST("menu")
     fun requestDinner(@Body params: DinnerRequestParams): Call<Void>

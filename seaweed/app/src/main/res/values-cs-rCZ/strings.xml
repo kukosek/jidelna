@@ -84,4 +84,15 @@
     <string name="autoorder_request_order_one_by_one_enabled">Vždy pošleme požadavek na objednání obědu x dní před obědem</string>
     <string name="autoorder_request_order_one_by_one_disabled">Pošleme požadavky na objednání všech obědů hned jak bude menu dostupné.</string>
     <string name="credit">"Kredit (kč): "</string>
+    <string name="see_all">Zobrazit a psát hodnocení</string>
+    <string name="title_activity_reviews">Hodnocení obědů</string>
+    <string name="write_review">Napsat recenzi...</string>
+    <string name="seconds_ago">před %1$d sekundami</string>
+    <string name="minutes_ago">před %1$d minutami</string>
+    <string name="hours_ago">před %1$d hodinami</string>
+    <string name="days_ago">před %1$d dny</string>
+    <string name="message">Vaše slovní hodnocení</string>
+    <string name="title_activity_reviews_write">Přidání recenze</string>
+    <string name="no_reviews_yet">Zatím žádné recenze. Napište první recenzi.</string>
+    <string name="must_order_to_write_review">Aby jste mohli napsat recenzi, musíte mít obědnaný oběd.</string>
 </resources>

@@ -51,6 +51,7 @@ class Worker:
             try:
                 if job.type == Jobs.LOGIN:
                     login_for_job()
+                    job.result = self.handler.get_user_name()
                 elif job.type == Jobs.LOGOUT:
                     self.handler.logout()
                     self.loggedUser = None

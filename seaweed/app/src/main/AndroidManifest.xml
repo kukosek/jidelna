@@ -14,10 +14,28 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
         tools:targetApi="m">
-        <activity android:name=".activities.main.webview">
+        <activity
+            android:name=".activities.reviewwrite.ReviewWriteActivity"
+            android:theme="@style/AppTheme"
+            android:label="@string/title_activity_reviews_write"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.reviews.ReviewsActivity">
+
+            ></activity>
+        <activity
+            android:name=".activities.reviews.ReviewsActivity"
+            android:label="@string/title_activity_reviews"
+            android:parentActivityName=".activities.main.MainActivity"
+            android:theme="@style/AppTheme"
+            />
+        <activity
+            android:name=".activities.main.webview"
+            android:parentActivityName=".activities.login.LoginActivity">
             <intent-filter>
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <action android:name="android.intent.action.VIEW" />
+
                 <data android:scheme="org.slavicin.jidelna.activities.main.webview" />
             </intent-filter>
             <!-- Parent activity meta-data to support 4.0 and lower -->
@@ -25,6 +43,7 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="org.slavicin.jidelna.activities.login.LoginActivity" />
         </activity>
+
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-8392464710590517~5269572192" />

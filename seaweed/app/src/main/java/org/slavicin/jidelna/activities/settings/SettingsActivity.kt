@@ -252,3 +252,5 @@ class SettingsActivity : AppCompatActivity(),
     }
 }
 
+
+

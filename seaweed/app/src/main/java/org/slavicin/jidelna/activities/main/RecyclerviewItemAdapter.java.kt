@@ -3,17 +3,16 @@ package org.slavicin.jidelna.activities.main
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.GONE
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.cardview.widget.CardView
-import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,12 +21,12 @@ import com.google.android.gms.ads.formats.MediaView
 import com.google.android.gms.ads.formats.UnifiedNativeAdView
 import com.google.android.material.snackbar.Snackbar
 import org.slavicin.jidelna.R
+import org.slavicin.jidelna.activities.reviews.ReviewsActivity
 import org.slavicin.jidelna.data.Dinner
 import org.slavicin.jidelna.data.getString
 import org.slavicin.jidelna.network.Action
 import org.slavicin.jidelna.network.DinnerRequestParams
 import org.slavicin.jidelna.network.RestApi
-import org.slavicin.jidelna.utlis.setAppTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -157,7 +156,7 @@ class DinnerItemAdapter internal constructor(
     }
 
     inner class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        var name: TextView = itemView.findViewById(R.id.dinnerName)
+        var name: TextView = itemView.findViewById(R.id.reviewInfo)
         var checkbox: CheckBox = itemView.findViewById(R.id.checkBox)
         var progressBar: ProgressBar = itemView.findViewById(R.id.progressBar)
     }
@@ -184,11 +183,38 @@ class MenuItemAdapter internal constructor(
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val item: MenuRecyclerviewItem = itemsList[position]
 
-        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(item.cantryMenu.date);
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val date = dateFormat.parse(item.cantryMenu.date);
         holder.name.text = SimpleDateFormat(
             "E d. M.",
             Locale.getDefault()
         ).format(date!!)
+        val today = dateFormat.format(Calendar.getInstance().time);
+
+        val isToday = today == item.cantryMenu.date
+
+        var numOfReviews = 0
+        val dinnerids = arrayListOf<Int>()
+
+        for (dinner in item.cantryMenu.menus) {
+            numOfReviews += dinner.numOfReviews
+            dinnerids.add( dinner.dinnerid)
+        }
+
+        /*
+        if (numOfReviews == 0 && !isToday) {
+            holder.seeCommentsButton.visibility = GONE
+        }
+        */
+        holder.seeCommentsButton.text = "${context.getString( R.string.see_all)} ($numOfReviews)"
+
+        holder.seeCommentsButton.setOnClickListener {
+            val intent = Intent(context, ReviewsActivity::class.java)
+            intent.putExtra("dinnerids", dinnerids)
+            startActivity(context, intent, null)
+
+        }
+
         holder.recyclerView.setHasFixedSize(true)
         val layoutManager: RecyclerView.LayoutManager =
             LinearLayoutManager(context)
@@ -242,6 +268,7 @@ class MenuItemAdapter internal constructor(
         var recyclerView : RecyclerView = itemView.findViewById(R.id.dinners)
         val adView: UnifiedNativeAdView = itemView.findViewById(R.id.ad_view)
         val cardView: CardView = itemView.findViewById(R.id.card_view)
+        val seeCommentsButton: Button = itemView.findViewById(R.id.btnSeeAll)
     }
 
 }

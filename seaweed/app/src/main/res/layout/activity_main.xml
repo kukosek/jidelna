@@ -12,7 +12,7 @@
         android:background="@color/colorBackgroundSecondary">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/menus"
+            android:id="@+id/reviews"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:padding="5dp" />

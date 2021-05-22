@@ -122,7 +122,8 @@ class DayOrder:
                         dinner_type=menu_info[3].text,
                         menu_number=int(menu_info[4].text),
                         name=menu_info[5].text,
-                        allergens=allergens
+                        allergens=allergens,
+                        status=""
                     )
                 )
 
@@ -164,7 +165,7 @@ class DayOrder:
             if int(self.menu[i].menu_number) == menu_number:
                 menu_index = i
         if menu_index is None:
-            raise ValueError("Menu " + menu_number + " not available")
+            raise ValueError("Menu " + str(menu_number) + " not available")
         else:
             # Order the specified dinner
             self.browser.find_element_by_id("dgBill").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name(
@@ -254,6 +255,11 @@ class JidelnaWebappHandler:
     def get_credit(self) -> float:
         strval = self.browser.find_element_by_id("lblCreditInfo").text
         return float(strval.replace(',', '.'))
+
+    def get_user_name(self) -> str:
+        strval = self.browser.find_element_by_id("lblPersonInfo").text
+        jidelna_id, name = strval.split(' - ', 1)
+        return name
 
     def order_menu(self, menu_number):
         self.dayorder.order(menu_number)
