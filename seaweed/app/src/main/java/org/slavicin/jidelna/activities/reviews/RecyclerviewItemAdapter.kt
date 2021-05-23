@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -36,6 +37,8 @@ class ReviewItemAdapter internal constructor(
 ) :
     RecyclerView.Adapter<ReviewItemAdapter.MyViewHolder>() {
     private val itemsList: List<Review> = mItemList
+    private var callByHuman: Boolean = true
+    private var starInitialized: Boolean = false
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val layoutInflater: LayoutInflater= context.getSystemService(Activity.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val view: View =
@@ -44,13 +47,22 @@ class ReviewItemAdapter internal constructor(
     }
 
     fun onUserScoreChange(androidLikeButton: AndroidLikeButton, item: Review, like: Boolean, holder: MyViewHolder) {
-
         val callAsync : Call<Void> = service.postReviewScore(item.id, PostReviewScoreParams(
             ReviewScore(when(like) {
                 true -> 1.0
                 false -> 0.0
             })
         ))
+        if (like) {
+            item.score += 1
+        } else {
+            item.score -= 1
+        }
+        if (callByHuman) {
+            notifyDataSetChanged()
+        } else{
+            callByHuman = true
+        }
         callAsync.enqueue(object : Callback<Void?> {
             override fun onResponse(
                 call: Call<Void?>,
@@ -100,17 +112,26 @@ class ReviewItemAdapter internal constructor(
         holder.likeButton.clipToOutline = true
         holder.score.text = item.score.toInt().toString()
 
-        if (item.userScore == 1.0) {
+        if (item.userScore == 1.0 && !starInitialized) {
+            starInitialized = true
+            callByHuman = false
             holder.likeButton.setCurrentlyLiked(true)
         }
 
 
-        val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS")
+        val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.ENGLISH)
+        format.timeZone = TimeZone.getTimeZone("UTC")
         val datePosted: Date = format.parse(item.datePosted)
+        
+        var stars: String = ""
+        for (i in 1..item.rating.toInt()) {
+            stars += "★"
+        }
+        for (i in 1..5-item.rating.toInt()) {
+            stars += "☆"
+        }
 
-
-
-        holder.date.text = agoString(context, datePosted)
+        holder.date.text = stars + " • " + agoString(context, datePosted)
 
         holder.likeButton.setOnLikeEventListener(object : OnLikeEventListener {
             override fun onLikeClicked(androidLikeButton: AndroidLikeButton) {

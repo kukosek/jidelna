@@ -2,32 +2,36 @@ package org.slavicin.jidelna.activities.reviewwrite
 
 import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.MenuItem
 import android.view.View.INVISIBLE
 import android.view.View.VISIBLE
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.RatingBar
+import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.app.NavUtils
 import androidx.core.content.ContextCompat
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.android.synthetic.main.activity_review_write.*
 import org.slavicin.jidelna.R
 import org.slavicin.jidelna.activities.login.LoginActivity
-import org.slavicin.jidelna.activities.logout
 import org.slavicin.jidelna.consts.APP_BASE_URL_DEFAULT
 import org.slavicin.jidelna.consts.APP_BASE_URL_KEY
 import org.slavicin.jidelna.consts.APP_PREFS_NAME
 import org.slavicin.jidelna.consts.COOKIE_PREFS_NAME
 import org.slavicin.jidelna.data.ReviewList
-import org.slavicin.jidelna.network.*
+import org.slavicin.jidelna.network.PostReviewParams
+import org.slavicin.jidelna.network.RestApi
+import org.slavicin.jidelna.network.ReviewParams
+import org.slavicin.jidelna.network.ServiceBuilder
 import org.slavicin.jidelna.utlis.setAppTheme
 import org.slavicin.jidelna.utlis.setSystemNavBarColor
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+
 
 class ReviewWriteActivity : AppCompatActivity() {
     var dinnerids = arrayListOf<Int>()
@@ -63,7 +67,8 @@ class ReviewWriteActivity : AppCompatActivity() {
             appPreferences.getString(
                 APP_BASE_URL_KEY,
                 APP_BASE_URL_DEFAULT
-            )!!, cookiePreferences
+            )!!, cookiePreferences,
+            false, this
         )
 
         loginIntent = Intent(this, LoginActivity::class.java)
@@ -102,6 +107,7 @@ class ReviewWriteActivity : AppCompatActivity() {
                             ContextCompat.startActivity(this@ReviewWriteActivity, loginIntent, Bundle())
                         } else {
                             val errorMessage: String = when {
+                                response.code() == 403 -> resources.getString(R.string.review_badwords)
                                 response.code() == 502 -> {
                                     org.slavicin.jidelna.data.getString(this@ReviewWriteActivity, "gateway_timeout")
                                 }
@@ -201,5 +207,15 @@ class ReviewWriteActivity : AppCompatActivity() {
                 ).show()
             }
         })
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                finish()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 }

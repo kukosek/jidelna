@@ -167,7 +167,7 @@ class JidelnaSuperstructureServer(object):
                         register_datetime=datetime.now()
                     )
                 user_name = distributor.distribute(Job(Jobs.LOGIN, user))
-                self.login_exception_check(result)
+                self.login_exception_check(user_name)
 
                 try:
                     possibly_existing_user: User = User.get(User.username == request_params["username"])
@@ -176,7 +176,7 @@ class JidelnaSuperstructureServer(object):
                 except DoesNotExist:
                     authid = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(AUTHID_LENGTH)])
                     user.authid = authid
-                    user_name
+                    user.name = user_name
 
                 user.save()
 
@@ -225,7 +225,6 @@ class JidelnaSuperstructureServer(object):
                 weekmenu: WeekMenu = distributor.distribute(Job(Jobs.GET_MENU, user))
             else:
                 weekmenu: WeekMenu = distributor.distribute(Job(Jobs.GET_DAYMENU, user, desired_date))
-            print(weekmenu)
             if isinstance(weekmenu, Exception):
                 self.login_exception_check(weekmenu)
                 cherrypy.log.error("/menu unknown exception:" + str(weekmenu))
@@ -272,7 +271,6 @@ class JidelnaSuperstructureServer(object):
                 order_date = datetime.strptime(request_params["date"], "%Y-%m-%d").date()
                 result = None
                 if action == "order":
-                    print(request_params["menuNumber"])
                     result = distributor.distribute(
                         Job(Jobs.ORDER_MENU, user, order_date, request_params["menuNumber"]))
                     try:
@@ -286,7 +284,7 @@ class JidelnaSuperstructureServer(object):
                     if isinstance(menus_cancel_day, Exception):
                         self.login_exception_check(menus_cancel_day)
                         raise cherrypy.HTTPError(status=500)
-                    menus_cancel_day = menus_cancel_day.menus
+                    menus_cancel_day = menus_cancel_day.daymenus[0].menus
                     something_is_ordered = False
                     for dinner in menus_cancel_day:
                         if dinner.status != "available" and dinner.status != "cancelling":
@@ -314,7 +312,7 @@ class JidelnaSuperstructureServer(object):
                             "/menu " + request_params["action"] + " request unknown exception:" + str(result))
                         raise cherrypy.HTTPError(status=500)
                 else:
-                    return "ok"
+                    return json.dumps({"creditLeft":result}).encode('utf8')
             except KeyError:
                 raise cherrypy.HTTPError(status=400)
 
@@ -412,45 +410,55 @@ class JidelnaSuperstructureServer(object):
 
             if "review" in request_params:
                 dinnerids = get_dinnerids()
+
+                dinners = SavedDinner.select().where(SavedDinner.id.in_(dinnerids))
+
+
                 try:
-                    saved_dinner = SavedDinner.get_by_id(dinnerids[0])
+                    serving_date = DinnerServingDates.select().where(
+                            DinnerServingDates.dinner.in_(dinners)
+                            ).order_by(DinnerServingDates.serving_date.desc()).get()
+                except DoesNotExist:
+                    raise cherrypy.HTTPError(400, "This dinner hasn't been served")
+                weekmenu: WeekMenu = distributor.distribute(Job(Jobs.GET_DAYMENU, user, serving_date.serving_date))
+                if isinstance(weekmenu, Exception):
+                    self.login_exception_check(weekmenu)
+                    cherrypy.log.error("/review create unknown exception:" + str(weekmenu))
+                    raise cherrypy.HTTPError(status=500)
+                daymenu = weekmenu.daymenus[0]
+                ordered_dinnerid: int = -1
+                for menu in daymenu.menus:
+                    menu = orderable_save_and_complete(menu, daymenu.date)
+                    if menu.status == 'ordered' or menu.status == 'ordered closed' or menu.status == 'ordering':
+                        ordered_dinnerid = (menu.dinner_id)
+                if ordered_dinnerid == -1:
+                    raise cherrypy.HTTPError(400, "Please order the dinnner you want to rate")
+                elif not str(ordered_dinnerid) in dinnerids:
+                    raise cherrypy.HTTPError(400, "You have ordered an other dinner than the one you want to rate.")
+
+
+                try:
+                    saved_dinner = SavedDinner.get_by_id(ordered_dinnerid)
                 except DoesNotExist:
                     raise cherrypy.HTTPError(400, "Dinner doesnt exist")
 
                 review = review_from_dict(request_params["review"],
                         user,saved_dinner, datetime.today())
+
+                with open('Security/word_blacklist.txt', 'r') as f:
+                    word_blacklist = f.readlines()
+                for word in word_blacklist:
+                    if word.strip() in review.message:
+                        raise cherrypy.HTTPError(403, "Review contains forbidden word")
+
                 try:
-                    old_review: Review = Review.get(Review.user==review.user, Review.dinner==review.dinner)
+                    old_review: Review = Review.get(Review.user==user, Review.dinner==saved_dinner)
                     old_review.rating = review.rating
                     old_review.date_posted = datetime.today()
                     old_review.score = 0
                     old_review.message = review.message
                     old_review.save()
                 except DoesNotExist:
-                    try:
-                        serving_date = DinnerServingDates.select().where(
-                                DinnerServingDates.dinner==review.dinner
-                                ).order_by(DinnerServingDates.serving_date.desc()).get()
-                    except DoesNotExist:
-                        raise cherrypy.HTTPError(400, "This dinner hasn't been served")
-                    weekmenu: WeekMenu = distributor.distribute(Job(Jobs.GET_DAYMENU, user, serving_date.serving_date))
-                    if isinstance(weekmenu, Exception):
-                        self.login_exception_check(weekmenu)
-                        cherrypy.log.error("/review create unknown exception:" + str(weekmenu))
-                        raise cherrypy.HTTPError(status=500)
-                    daymenu = weekmenu.daymenus[0]
-                    ordered_dinnerid: int = -1
-                    for menu in daymenu.menus:
-                        menu = orderable_save_and_complete(menu, daymenu.date)
-                        if menu.status == 'ordered' or menu.status == 'ordered closed' or menu.status == 'ordering':
-                            ordered_dinnerid = (menu.dinner_id)
-                            print("ok")
-                    print(ordered_dinnerid)
-                    if ordered_dinnerid == -1:
-                        raise cherrypy.HTTPError(400, "Please order the dinnner you want to rate")
-                    elif not ordered_dinnerid in dinnerids:
-                        raise cherrypy.HTTPError(400, "You have ordered an other dinner than the one you want to rate.")
-
                     review.save()
         return "ok".encode('utf-8')
 

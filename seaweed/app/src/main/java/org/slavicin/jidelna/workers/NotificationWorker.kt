@@ -77,7 +77,8 @@ class NotificationWorker(val context: Context, params: WorkerParameters) : Worke
             appPreferences.getString(
                 APP_BASE_URL_KEY,
                 APP_BASE_URL_DEFAULT
-            )!!, cookiePreferences
+            )!!, cookiePreferences,
+            false, context
         )
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)

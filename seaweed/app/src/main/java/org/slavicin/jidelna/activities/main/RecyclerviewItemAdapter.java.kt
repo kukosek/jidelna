@@ -23,6 +23,7 @@ import com.google.android.material.snackbar.Snackbar
 import org.slavicin.jidelna.R
 import org.slavicin.jidelna.activities.reviews.ReviewsActivity
 import org.slavicin.jidelna.data.Dinner
+import org.slavicin.jidelna.data.DinnerRequestCallback
 import org.slavicin.jidelna.data.getString
 import org.slavicin.jidelna.network.Action
 import org.slavicin.jidelna.network.DinnerRequestParams
@@ -51,6 +52,7 @@ class DinnerItemAdapter internal constructor(
     val rootLayout: SwipeRefreshLayout,
     val loginIntent: Intent,
     val dataSetChanged: () -> Unit,
+    val setCreditLeft: (creditLeft: Int) -> Unit,
     val context: Context
 ) :
     RecyclerView.Adapter<DinnerItemAdapter.MyViewHolder>() {
@@ -87,21 +89,23 @@ class DinnerItemAdapter internal constructor(
             }else{
                 Action.CANCEL_ORDER
             }
-            val callAsync : Call<Void> = service.requestDinner(
+            val callAsync : Call<DinnerRequestCallback> = service.requestDinner(
                 DinnerRequestParams(
                     action,
                     date,
                     item.menuNumber
                 )
             )
-            callAsync.enqueue(object : Callback<Void?> {
+            callAsync.enqueue(object : Callback<DinnerRequestCallback?> {
                 override fun onResponse(
-                    call: Call<Void?>,
-                    response: Response<Void?>
+                    call: Call<DinnerRequestCallback?>,
+                    response: Response<DinnerRequestCallback?>
                 ) {
                     holder.progressBar.visibility = View.GONE
                     holder.checkbox.visibility = View.VISIBLE
                     if (response.isSuccessful) {
+                        val creditLeft = response.body()!!.creditLeft
+                        setCreditLeft(creditLeft)
                         if (action == Action.ORDER) {
                             for (mItem in itemsList) {
                                 mItem.status = Status.AVAILABLE
@@ -134,7 +138,7 @@ class DinnerItemAdapter internal constructor(
                 }
 
                 override fun onFailure(
-                    call: Call<Void?>,
+                    call: Call<DinnerRequestCallback?>,
                     t: Throwable
                 ) {
                     holder.progressBar.visibility = View.GONE
@@ -168,6 +172,7 @@ class MenuItemAdapter internal constructor(
     private val service: RestApi,
     private val rootLayout: SwipeRefreshLayout,
     private val loginIntent: Intent,
+    private val setCreditLeft: (creditLeft: Int) -> Unit,
     val context: Context
 ) :
     RecyclerView.Adapter<MenuItemAdapter.MyViewHolder>() {
@@ -201,16 +206,23 @@ class MenuItemAdapter internal constructor(
             dinnerids.add( dinner.dinnerid)
         }
 
-        /*
         if (numOfReviews == 0 && !isToday) {
             holder.seeCommentsButton.visibility = GONE
         }
-        */
         holder.seeCommentsButton.text = "${context.getString( R.string.see_all)} ($numOfReviews)"
 
         holder.seeCommentsButton.setOnClickListener {
             val intent = Intent(context, ReviewsActivity::class.java)
             intent.putExtra("dinnerids", dinnerids)
+
+            var canOrder = false
+            for (menu in item.cantryMenu.menus) {
+                if (menu.status == Status.ORDERED || menu.status == Status.ORDERED_CLOSED) {
+                    canOrder = true
+                }
+            }
+            intent.putExtra("canOrder", canOrder)
+
             startActivity(context, intent, null)
 
         }
@@ -227,6 +239,7 @@ class MenuItemAdapter internal constructor(
             rootLayout,
             loginIntent,
             ::notifyDataSetChanged,
+            setCreditLeft,
             context
         )
         holder.recyclerView.adapter = dinnerItemAdapter

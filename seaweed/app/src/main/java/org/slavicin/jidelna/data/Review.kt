@@ -7,7 +7,7 @@ data class Review(
     val user: String,
     val rating: Double,
     val message: String,
-    val score: Double,
+    var score: Double,
     val userScore: Double,
     val datePosted: String
 )

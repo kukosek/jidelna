@@ -64,9 +64,11 @@ class Worker:
                     elif job.type == Jobs.ORDER_MENU:
                         self.handler.select_date(job.arguments[0])
                         self.handler.order_menu(job.arguments[1])
+                        job.result = self.handler.get_credit()
                     elif job.type == Jobs.CANCEL_ORDER:
                         self.handler.select_date(job.arguments[0])
                         self.handler.cancel_order(job.arguments[1])
+                        job.result = self.handler.get_credit()
                     elif job.type == Jobs.GET_DAYMENU:
                         desired_date = job.arguments[0]
                         self.handler.select_date(desired_date)

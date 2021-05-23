@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -20,6 +21,7 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.formats.NativeAdOptions
 import com.google.android.gms.ads.formats.UnifiedNativeAd
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.activity_main.*
 import org.slavicin.jidelna.R
 import org.slavicin.jidelna.activities.login.LoginActivity
 import org.slavicin.jidelna.activities.logout
@@ -42,14 +44,27 @@ class MainActivity : AppCompatActivity() {
     lateinit var cookiePreferences: SharedPreferences
     lateinit var loginIntent: Intent
     lateinit var service : RestApi
+    lateinit var cachedService: RestApi
     lateinit var rootLayout : SwipeRefreshLayout
     var menus = mutableListOf<MenuRecyclerviewItem>()
     lateinit var menusRecyclerView: RecyclerView
     private lateinit var menuItemAdapter : MenuItemAdapter
     private val nativeAds =  arrayOfNulls<UnifiedNativeAd>(NUMBER_OF_ADS)
+
+    private var loadedNew = false
+
+    private fun setCreditLeft(creditLeft: Int)  {
+        val message =
+            resources.getString(R.string.credit) + creditLeft.toString()
+
+        creditTextView.text = message
+
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setAppTheme(this)
+        setContentView(R.layout.activity_main)
         appPreferences = getSharedPreferences(APP_PREFS_NAME, Context.MODE_PRIVATE)
         cookiePreferences = getSharedPreferences(COOKIE_PREFS_NAME, Context.MODE_PRIVATE)
         loginIntent = Intent(this, LoginActivity::class.java)
@@ -71,7 +86,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (authidFound) {
-            setContentView(R.layout.activity_main)
 
             setSystemNavBarColor(this, window)
 
@@ -79,7 +93,15 @@ class MainActivity : AppCompatActivity() {
                 appPreferences.getString(
                     APP_BASE_URL_KEY,
                     APP_BASE_URL_DEFAULT
-                )!!, cookiePreferences
+                )!!, cookiePreferences,
+                false, this
+            )
+            cachedService = ServiceBuilder().build(
+                appPreferences.getString(
+                    APP_BASE_URL_KEY,
+                    APP_BASE_URL_DEFAULT
+                )!!, cookiePreferences,
+                true, this
             )
 
             rootLayout = findViewById<SwipeRefreshLayout>(R.id.main_layout)
@@ -89,6 +111,7 @@ class MainActivity : AppCompatActivity() {
 
             menusRecyclerView = findViewById(R.id.reviews)
             menuItemAdapter = MenuItemAdapter(menus, service, rootLayout, loginIntent,
+                ::setCreditLeft,
                 this
             )
             val layoutManager: RecyclerView.LayoutManager = LinearLayoutManager(
@@ -98,7 +121,7 @@ class MainActivity : AppCompatActivity() {
             menusRecyclerView.layoutManager = layoutManager;
             menusRecyclerView.adapter = menuItemAdapter;
             setAppTheme(this)
-            val adLoader = AdLoader.Builder(this, ADMOB_NATIVE_AD_ID)
+            val adLoader = AdLoader.Builder(this, ADMOB_NATIVE_AD_TESTID)
                 .forUnifiedNativeAd { ad : UnifiedNativeAd ->
                     nativeAds[nativeAds.indexOf(null)] = ad
                     if (menus.isNotEmpty()) {
@@ -108,13 +131,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 .withAdListener(object : AdListener() {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        // Handle the failure by logging, altering the UI, and so on.
                     }
                 })
                 .withNativeAdOptions(
                     NativeAdOptions.Builder()
-                    // Methods in the NativeAdOptions.Builder class can be
-                    // used here to specify individual options settings.
                     .build())
                 .build()
 
@@ -155,6 +175,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    fun onCallSuccess(response: Response<WeekMenu?>, addAds: Boolean) {
+
+        setCreditLeft(response.body()!!.creditLeft)
+        menus.clear()
+        val responseMenus: List<CantryMenu> = response.body()!!.daymenus
+        for (menu in responseMenus) {
+            menus.add(MenuRecyclerviewItem(menu, null))
+        }
+
+        if (addAds) {
+            addAdsToMenu()
+        }
+
+        menuItemAdapter.notifyDataSetChanged();
+    }
 
     private fun reloadMenu(){
         rootLayout.isRefreshing = true;
@@ -165,21 +200,8 @@ class MainActivity : AppCompatActivity() {
                 response: Response<WeekMenu?>
             ) {
                 if (response.isSuccessful) {
-                    val message = resources.getString(R.string.credit) + response.body()?.creditLeft.toString()
-                    Snackbar.make(
-                        rootLayout,
-                        message,
-                        Snackbar.LENGTH_SHORT
-                    ).show()
-
-                    menus.clear()
-                    val responseMenus : List<CantryMenu> = response.body()!!.daymenus
-                    for (menu in responseMenus) {
-                        menus.add(MenuRecyclerviewItem(menu, null))
-                    }
-                    addAdsToMenu()
-
-                    menuItemAdapter.notifyDataSetChanged();
+                    loadedNew = true
+                    onCallSuccess(response, true)
                 } else {
                     if (response.code() == 401) {
                         logout(cookiePreferences, this@MainActivity)
@@ -211,6 +233,24 @@ class MainActivity : AppCompatActivity() {
                     errorMessage,
                     Snackbar.LENGTH_SHORT
                 ).show()
+            }
+        })
+
+        val cachedCallAsync  = cachedService.getMenus()
+        cachedCallAsync.enqueue(object : Callback<WeekMenu?> {
+            override fun onResponse(
+                call: Call<WeekMenu?>,
+                response: Response<WeekMenu?>
+            ) {
+                if (response.isSuccessful && !loadedNew) {
+                    onCallSuccess(response, false)
+                }
+            }
+
+            override fun onFailure(
+                call: Call<WeekMenu?>,
+                t: Throwable
+            ) {
             }
         })
 

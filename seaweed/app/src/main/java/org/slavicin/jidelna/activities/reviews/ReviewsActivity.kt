@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
+import android.view.MenuItem
 import android.view.View.INVISIBLE
 import android.view.View.VISIBLE
 import android.widget.FrameLayout
@@ -43,6 +44,7 @@ class ReviewsActivity : AppCompatActivity() {
     private lateinit var reviewsItemAdapter : ReviewItemAdapter
 
     var dinnerids = arrayListOf<Int>()
+    var canOrder = true
 
     private fun reloadReviews() {
         rootLayout.isRefreshing = true;
@@ -103,6 +105,7 @@ class ReviewsActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putSerializable("dinnerids", dinnerids)
+        outState.putBoolean("canOrder", canOrder)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,9 +115,11 @@ class ReviewsActivity : AppCompatActivity() {
             val extras = intent.extras
             if (extras != null) {
                 dinnerids = extras.getIntegerArrayList("dinnerids") as ArrayList<Int>
+                canOrder = extras.getBoolean("canOrder")
             }
         } else {
             dinnerids = savedInstanceState.getSerializable("dinnerids") as ArrayList<Int>
+            canOrder = savedInstanceState.getBoolean("canOrder")
         }
 
         setAppTheme(this)
@@ -135,16 +140,26 @@ class ReviewsActivity : AppCompatActivity() {
         setSystemNavBarColor(this, window)
 
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener {
-            val intent = Intent(this, ReviewWriteActivity::class.java)
-            intent.putExtra("dinnerids", dinnerids)
-            ContextCompat.startActivity(this, intent, null)
+            if (canOrder) {
+                val intent = Intent(this, ReviewWriteActivity::class.java)
+                intent.putExtra("dinnerids", dinnerids)
+                ContextCompat.startActivity(this, intent, null)
+            } else {
+                val errorMessage = resources.getString(R.string.must_order_to_write_review)
+                Snackbar.make(
+                    rootLayout,
+                    errorMessage,
+                    Snackbar.LENGTH_SHORT
+                ).show()
+            }
         }
 
         service = ServiceBuilder().build(
             appPreferences.getString(
                 APP_BASE_URL_KEY,
                 APP_BASE_URL_DEFAULT
-            )!!, cookiePreferences
+            )!!, cookiePreferences,
+            false, this
         )
 
         noReviewsLayout = findViewById(R.id.no_reviews_layout)
@@ -168,5 +183,20 @@ class ReviewsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
         reloadReviews()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        reloadReviews()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                finish()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 }

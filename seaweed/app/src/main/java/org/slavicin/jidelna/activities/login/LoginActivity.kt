@@ -58,7 +58,8 @@ class LoginActivity : AppCompatActivity() {
             appPreferences.getString(
                 APP_BASE_URL_KEY,
                 APP_BASE_URL_DEFAULT
-            )!!, cookiePreferences
+            )!!, cookiePreferences,
+            false, this
         )
         val username = findViewById<EditText>(R.id.username)
         username.setText(loginPersistence.getString("username", ""))
@@ -191,7 +192,7 @@ class LoginActivity : AppCompatActivity() {
                         appPreferences.edit {
                             this.putString(APP_BASE_URL_KEY, baseUrl)
                         }
-                        service = ServiceBuilder().build(baseUrl, cookiePreferences)
+                        service = ServiceBuilder().build(baseUrl, cookiePreferences, false, this)
                         loginViewModel.loginRepository.dataSource.service = service
 
                     })
@@ -203,7 +204,7 @@ class LoginActivity : AppCompatActivity() {
                             appPreferences.edit {
                                 this.putString(APP_BASE_URL_KEY, baseUrl)
                             }
-                            service = ServiceBuilder().build(baseUrl, cookiePreferences)
+                            service = ServiceBuilder().build(baseUrl, cookiePreferences, false, this)
                             loginViewModel.loginRepository.dataSource.service = service
 
                         })
