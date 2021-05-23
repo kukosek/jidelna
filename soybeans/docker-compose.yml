@@ -33,3 +33,17 @@ services:
       - 9090:8080
     depends_on:
       - postgres
+  scheduler:
+    image: docker.dulik.net/jidelnascheduler:latest
+    restart: always
+    environment:
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_HOST=postgres
+      - DB_PASSWORD=postgres
+      - DB_PORT=5432
+      - NUM_OF_WORKERS=1
+      - HEADLESS=true
+    depends_on:
+      - postgres
+      - api

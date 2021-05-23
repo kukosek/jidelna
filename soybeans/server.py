@@ -36,7 +36,6 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-import schedule
 
 
 #RFC date for expiring cookies
@@ -77,8 +76,6 @@ if __name__ == '__main__':
         print("No NUM_OF_WORKERS env variable, defaulting to 1.")
         num_of_workers = 1
     distributor = BrowserWorkDistributor(num_of_workers)
-    autoorder_manager = AutomaticOrderManager(distributor, db)
-    schedule.every().day.at("06:19").do(autoorder_manager.do_automatic_orders)
 
 def get_user_by_authid(authid) -> User:
     try:
@@ -471,26 +468,14 @@ def _db_close():
         db.close()
 
 
-class RunScheduler:
-    def __init__(self):
-        self.running = True
 
-    def rs(self):
-        while self.running:
-            schedule.run_pending()
-            time.sleep(1)
-
-
-run_scheduler = RunScheduler()
 
 
 class ThreadController(cherrypy.process.plugins.SimplePlugin):
     def start(self):
-        scheduler_thread = threading.Thread(target=run_scheduler.rs)
-        scheduler_thread.start()
+        pass
 
     def stop(self):
-        run_scheduler.running = False
         try:
             distributor.close_all()
         except Exception:

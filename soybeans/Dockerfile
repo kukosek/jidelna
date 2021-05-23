@@ -16,7 +16,3 @@ COPY setup-tools/geckodriver /usr/bin
 RUN chmod 777 /usr/bin/geckodriver
 
 COPY . /app
-
-EXPOSE 8080
-
-CMD ["python3", "server.py"]

@@ -105,13 +105,18 @@ of interaction with our canteen web app, like login, logout, get menu and such.
 
 You need Docker, docker-compose
 
-1. Build your image release
-	- `docker build -t my-jidelnaserver:latest .`
+1. Chose base image name, e.g. **my-jidelna-base**
+2. Edit Server/Dockerfile and Automatic/Dockerfile , change the `FROM docker.dulik.net/...` to `FROM my-jidelna-base`
 
-2. Edit docker compose image name in *docker-compose.yml*
+3. Build your image releases
+	- `docker build -t my-jidelna-base:latest .`
+	- `docker build -t my-jidelna-server:latest -f Server/Dockerfile .`
+	- `docker build -t my-jidelna-scheduler:latest -f Automatic/Dockerfile .`
+
+4. Edit docker compose image name in *docker-compose.yml*
 from docker.dulik.net/... to my-jidelnaserver
 
-3. Run it: `docker-compose up`, or in background: `docker-compose up -d`
+5. Run it: `docker-compose up`, or in background: `docker-compose up -d`
 
 ## Running it without Docker
 
