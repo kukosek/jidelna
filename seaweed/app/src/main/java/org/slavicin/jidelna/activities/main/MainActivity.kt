@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
             menusRecyclerView.layoutManager = layoutManager;
             menusRecyclerView.adapter = menuItemAdapter;
             setAppTheme(this)
-            val adLoader = AdLoader.Builder(this, ADMOB_NATIVE_AD_TESTID)
+            val adLoader = AdLoader.Builder(this, ADMOB_NATIVE_AD_ID)
                 .forUnifiedNativeAd { ad : UnifiedNativeAd ->
                     nativeAds[nativeAds.indexOf(null)] = ad
                     if (menus.isNotEmpty()) {
