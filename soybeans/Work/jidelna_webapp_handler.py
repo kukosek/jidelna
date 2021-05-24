@@ -254,7 +254,7 @@ class JidelnaWebappHandler:
 
     def get_credit(self) -> float:
         strval = self.browser.find_element_by_id("lblCreditInfo").text
-        return float(strval.replace(',', '.'))
+        return float(strval.replace(',', '.').replace(' ', ''))
 
     def get_user_name(self) -> str:
         strval = self.browser.find_element_by_id("lblPersonInfo").text

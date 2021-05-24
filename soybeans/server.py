@@ -4,6 +4,7 @@ import cherrypy
 import cherrypy_cors
 
 import threading
+import schedule
 
 from Automatic.dinner_ranker import DinnerRanker
 from Work.browser_work_distributor import BrowserWorkDistributor
@@ -13,6 +14,7 @@ from Work.exceptions import *
 
 from Automatic.automatic_order import AutomaticOrderManager
 
+from peewee import OperationalError, InterfaceError
 from Store.get_db import get_db
 from Store.user import User
 from Store.saved_dinner import SavedDinner
@@ -460,22 +462,51 @@ class JidelnaSuperstructureServer(object):
         return "ok".encode('utf-8')
 
 def _db_connect():
-    if not db.is_connection_usable():
-        db.connect()
+    db.connect(reuse_if_open=True)
 
 def _db_close():
-    if not db.is_closed():
-        db.close()
+    db.close()
 
 
 
+class RunScheduler:
+    def __init__(self):
+        self.running = True
+
+    def rs(self):
+        cherrypy.log.error("Start DB keepalive")
+        i = 0
+        while self.running:
+            e = threading.Event()
+            e.wait(timeout=1)
+            if i >= 60:
+                i = 0
+                _db_connect()
+
+                try:
+                    User.select().get()
+                except DoesNotExist:
+                    pass
+                except (InterfaceError, OperationalError):
+                    cherrypy.log.error("Db reconnecting...")
+                    _db_close()
+                    _db_connect()
+
+                _db_close()
+            else:
+                i+=1
+
+
+run_scheduler = RunScheduler()
 
 
 class ThreadController(cherrypy.process.plugins.SimplePlugin):
     def start(self):
-        pass
+        scheduler_thread = threading.Thread(target=run_scheduler.rs)
+        scheduler_thread.start()
 
     def stop(self):
+        run_scheduler.running = False
         try:
             distributor.close_all()
         except Exception:
@@ -495,6 +526,7 @@ if __name__ == '__main__':
     thread_controller = ThreadController(cherrypy.engine)
     thread_controller.subscribe()
 
+
     config = {}
     try:
         config['/']= {'tools.CORS.on': True }
@@ -512,7 +544,7 @@ if __name__ == '__main__':
         cherrypy_cors.install()
         cherrypy.tools.CORS = cherrypy.Tool("before_finalize", CORS)
         cherrypy.engine.subscribe('before_request', _db_connect)
+        cherrypy.engine.subscribe('after_request', _db_close)
         cherrypy.quickstart(JidelnaSuperstructureServer())
     except Exception:
         finish()
-    finish()
