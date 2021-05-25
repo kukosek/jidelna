@@ -87,7 +87,6 @@ class AutomaticOrderManager:
 
     # Automatically orders something for every user that has autoorder enabled and didn't already order something
     def do_automatic_orders(self):
-        self.db.connect()
         cherrypy.log("Starting autoorder")
         autoorder_users: List[User] = User.select().where(User.autoorder_enable == True )
         num_of_users = len(autoorder_users)

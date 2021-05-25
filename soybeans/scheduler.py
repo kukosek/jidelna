@@ -1,4 +1,5 @@
 import time
+from playhouse.pool import PooledPostgresqlExtDatabase
 import schedule
 import os
 from peewee import PostgresqlDatabase
@@ -17,7 +18,8 @@ except Exception:
     num_of_workers = 1
 distributor = BrowserWorkDistributor(num_of_workers)
 
-db: PostgresqlDatabase = get_db()
+db: PooledPostgresqlExtDatabase = get_db()
+db.connect()
 
 autoorder_manager = AutomaticOrderManager(distributor, db)
 schedule.every().day.at("04:19").do(autoorder_manager.do_automatic_orders)

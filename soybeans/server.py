@@ -1,3 +1,4 @@
+from playhouse.pool import PooledPostgresqlExtDatabase
 from Work.weekmenu import WeekMenu
 from Store.orderable_save_and_fill import orderable_save_and_complete
 import cherrypy
@@ -55,7 +56,7 @@ def CORS():
     cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
 if __name__ == '__main__':
-    db: PostgresqlDatabase = get_db()
+    db: PooledPostgresqlExtDatabase = get_db()
     db.connect()
 
     db.create_tables([
@@ -462,24 +463,18 @@ class JidelnaSuperstructureServer(object):
         return "ok".encode('utf-8')
 
 def _db_connect():
+    return
     db.connect(reuse_if_open=True)
-    try:
-        User.select().get()
-    except DoesNotExist:
-        pass
-    except (InterfaceError, OperationalError):
-        cherrypy.log.error("Db reconnecting...")
-        _db_close()
-        db.connect()
 
 def _db_close():
+    return
     db.close()
 
 
 
 class RunScheduler:
     def __init__(self):
-        self.running = True
+        self.running = False
 
     def rs(self):
         cherrypy.log.error("Start DB keepalive")
