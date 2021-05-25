@@ -23,8 +23,15 @@ spec:
       - name: jidelna-backend
         image: docker.dulik.net/jidelnaserver:latest
         env:
-        - name: DB_CONF
-          value: "dbname=jidelna user=testuser host='10.109.56.60' password=jidelna"
+        - name: DB_NAME
+          value: "jidelna"
+        - name: DB_USER
+          value: "testuser"
+        - name: DB_HOST
+          value: "10.109.56.60"
+        - name: DB_PASSWORD
+          value: "jidelna"
+
         - name: PORT
           value: "8080"
         - name: REQUEST_SHOW_ERRORS
@@ -49,6 +56,46 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jidelna-scheduler
+  labels:
+    app: jidelna-scheduler
+  annotations:
+    keel.sh/policy: all
+    keel.sh/trigger: poll
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jidelna-scheduler
+  template:
+    metadata:
+      labels:
+        app: jidelna-scheduler
+    spec:
+      imagePullSecrets:
+      - name: registrypullsecret
+      containers:
+      - name: jidelna-scheduler
+        image: docker.dulik.net/jidelnascheduler:latest
+        env:
+        - name: DB_NAME
+          value: "jidelna"
+        - name: DB_USER
+          value: "testuser"
+        - name: DB_HOST
+          value: "10.109.56.60"
+        - name: DB_PASSWORD
+          value: "jidelna"
+
+        - name: NUM_OF_WORKERS
+          value: "3"
+        - name: HEADLESS
+          value: "true"
 
 ---
 
