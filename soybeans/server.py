@@ -463,6 +463,14 @@ class JidelnaSuperstructureServer(object):
 
 def _db_connect():
     db.connect(reuse_if_open=True)
+    try:
+        User.select().get()
+    except DoesNotExist:
+        pass
+    except (InterfaceError, OperationalError):
+        cherrypy.log.error("Db reconnecting...")
+        _db_close()
+        db.connect()
 
 def _db_close():
     db.close()
