@@ -1,4 +1,3 @@
-from playhouse.pool import PooledPostgresqlExtDatabase
 from Work.weekmenu import WeekMenu
 from Store.orderable_save_and_fill import orderable_save_and_complete
 import cherrypy
@@ -15,7 +14,7 @@ from Work.exceptions import *
 
 from Automatic.automatic_order import AutomaticOrderManager
 
-from peewee import OperationalError, InterfaceError
+from peewee import PostgresqlDatabase, OperationalError, InterfaceError
 from Store.get_db import get_db
 from Store.user import User
 from Store.saved_dinner import SavedDinner
@@ -55,8 +54,8 @@ AUTHID_LENGTH = 128
 def CORS():
     cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
+db: PostgresqlDatabase = get_db()
 if __name__ == '__main__':
-    db: PooledPostgresqlExtDatabase = get_db()
     db.connect()
 
     db.create_tables([
@@ -79,14 +78,31 @@ if __name__ == '__main__':
         print("No NUM_OF_WORKERS env variable, defaulting to 1.")
         num_of_workers = 1
     distributor = BrowserWorkDistributor(num_of_workers)
+    db.close()
 
 def get_user_by_authid(authid) -> User:
-    try:
-        return User.get(User.authid == authid)
-    except DoesNotExist:
-        cherrypy.response.cookie["authid"] = authid
-        cherrypy.response.cookie["authid"]["expires"] = 0
-        raise cherrypy.HTTPError(status=401, message="Bad authid")
+    attempts = 0
+    user = None
+    while attempts <= 2 and user is None:
+        try:
+            user = User.get(User.authid == authid)
+        except DoesNotExist:
+            cherrypy.response.cookie["authid"] = authid
+            cherrypy.response.cookie["authid"]["expires"] = 0
+            raise cherrypy.HTTPError(status=401, message="Bad authid")
+        except (InterfaceError, OperationalError) as e:
+            print(str(e))
+            attempts+= 1
+            db.close()
+            db.connect()
+    if user is None:
+        print("Couldnt connect and find user in thread", threading.get_ident())
+        print('after', attempts, 'attempts')
+        raise cherrypy.HTTPError("DB connection error")
+    else:
+        print("Got user", user.name, "after", attempts, "attempts")
+        return user
+
 
 class JidelnaSuperstructureServer(object):
     def get_request_origin_ip(self):
@@ -462,12 +478,12 @@ class JidelnaSuperstructureServer(object):
                     review.save()
         return "ok".encode('utf-8')
 
-def _db_connect():
-    return
-    db.connect(reuse_if_open=True)
+def _db_connect(i=None):
+    print("Connecting", threading.get_ident())
+    db.connect()
 
-def _db_close():
-    return
+def _db_close(i=None):
+    print("Returning conn to pool", threading.get_ident())
     db.close()
 
 

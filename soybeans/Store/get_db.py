@@ -1,13 +1,13 @@
 import os
-from playhouse.pool import PooledPostgresqlExtDatabase
+from peewee import PostgresqlDatabase
 
-def get_db() -> PooledPostgresqlExtDatabase:
-    return PooledPostgresqlExtDatabase(
+def get_db() -> PostgresqlDatabase:
+    return PostgresqlDatabase(
         os.getenv('DB_NAME'),
+        autoconnect=True,
 
-        max_connections=8,
-        stale_timeout=5,
-        timeout=5,
+        #max_connections=20,
+        #stale_timeout=5,
 
         user=os.getenv('DB_USER'),
         password=os.getenv('DB_PASSWORD'),

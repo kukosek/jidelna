@@ -28,7 +28,7 @@ spec:
         - name: DB_USER
           value: "testuser"
         - name: DB_HOST
-          value: "10.109.56.60"
+          value: "jidelna.pgo"
         - name: DB_PASSWORD
           value: "jidelna"
 
@@ -88,7 +88,7 @@ spec:
         - name: DB_USER
           value: "testuser"
         - name: DB_HOST
-          value: "10.109.56.60"
+          value: "jidelna.pgo"
         - name: DB_PASSWORD
           value: "jidelna"
 
