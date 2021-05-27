@@ -4,9 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.GONE
+import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
@@ -208,6 +210,8 @@ class MenuItemAdapter internal constructor(
 
         if (numOfReviews == 0 && !isToday) {
             holder.seeCommentsButton.visibility = GONE
+        }else {
+            holder.seeCommentsButton.visibility = VISIBLE
         }
         holder.seeCommentsButton.text = "${context.getString( R.string.see_all)} ($numOfReviews)"
 
