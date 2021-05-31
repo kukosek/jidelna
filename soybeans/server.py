@@ -54,8 +54,8 @@ AUTHID_LENGTH = 128
 def CORS():
     cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
-db: PostgresqlDatabase = get_db()
 if __name__ == '__main__':
+    db: PostgresqlDatabase = get_db()
     db.connect()
 
     db.create_tables([
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     distributor = BrowserWorkDistributor(num_of_workers)
     db.close()
 
-def get_user_by_authid(authid) -> User:
+def get_user_by_authid(authid: str, db: PostgresqlDatabase) -> User:
     attempts = 0
     user = None
     while attempts <= 2 and user is None:
@@ -98,6 +98,7 @@ def get_user_by_authid(authid) -> User:
     if user is None:
         print("Couldnt connect and find user in thread", threading.get_ident())
         print('after', attempts, 'attempts')
+        exit(1)
         raise cherrypy.HTTPError("DB connection error")
     else:
         print("Got user", user.name, "after", attempts, "attempts")
@@ -153,7 +154,7 @@ class JidelnaSuperstructureServer(object):
             if not login_guard.is_ip_malicious(self.get_request_origin_ip()):
                 if "authid" in cherrypy.request.cookie:
                     authid = self.get_authid()
-                    user = get_user_by_authid(authid)
+                    user = get_user_by_authid(authid, db)
 
                     result = distributor.distribute(Job(Jobs.LOGIN, user))
                     if isinstance(result, Exception):
@@ -210,7 +211,7 @@ class JidelnaSuperstructureServer(object):
     @cherrypy.expose
     def logout(self, **params):
         authid = self.get_authid()
-        user = get_user_by_authid(authid)
+        user = get_user_by_authid(authid, db)
 
         now = datetime.now()
         stamp = mktime(now.timetuple())
@@ -226,7 +227,7 @@ class JidelnaSuperstructureServer(object):
     @cherrypy.expose
     def menu(self, **params):
         authid = self.get_authid()
-        user : User = get_user_by_authid(authid)
+        user : User = get_user_by_authid(authid, db)
 
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -335,7 +336,7 @@ class JidelnaSuperstructureServer(object):
     @cherrypy.expose
     def settings(self):
         authid = self.get_authid()
-        user = get_user_by_authid(authid)
+        user = get_user_by_authid(authid, db)
 
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -375,7 +376,7 @@ class JidelnaSuperstructureServer(object):
     def reviews(self, **params):
 
         authid = self.get_authid()
-        user : User = get_user_by_authid(authid)
+        user : User = get_user_by_authid(authid, db)
 
 
         def get_dinnerids():
@@ -478,12 +479,10 @@ class JidelnaSuperstructureServer(object):
                     review.save()
         return "ok".encode('utf-8')
 
-def _db_connect(i=None):
-    print("Connecting", threading.get_ident())
+def _db_connect():
     db.connect()
 
-def _db_close(i=None):
-    print("Returning conn to pool", threading.get_ident())
+def _db_close():
     db.close()
 
 
@@ -493,27 +492,7 @@ class RunScheduler:
         self.running = False
 
     def rs(self):
-        cherrypy.log.error("Start DB keepalive")
-        i = 0
-        while self.running:
-            e = threading.Event()
-            e.wait(timeout=1)
-            if i >= 60:
-                i = 0
-                _db_connect()
-
-                try:
-                    User.select().get()
-                except DoesNotExist:
-                    pass
-                except (InterfaceError, OperationalError):
-                    cherrypy.log.error("Db reconnecting...")
-                    _db_close()
-                    _db_connect()
-
-                _db_close()
-            else:
-                i+=1
+        pass
 
 
 run_scheduler = RunScheduler()
