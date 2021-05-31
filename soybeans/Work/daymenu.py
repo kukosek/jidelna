@@ -1,14 +1,16 @@
 import json
 import datetime
 from Work.orderable_dinner import OrderableDinner
+from typing import List
 
 
 class DayMenu:
-    def __init__(self, date=None, menus=None):
+    def __init__(self, date=None, menus=[]):
         self.date = date
-        self.menus = menus
+        self.menus: List[OrderableDinner] = menus
 
     def from_dict(self, dictionary):
+        print("cs")
         if isinstance(dictionary["date"], datetime.date):
             self.date = dictionary["date"]
         else:

@@ -61,7 +61,8 @@ class SettingsActivity : AppCompatActivity(),
             appPreferences.getString(
                 APP_BASE_URL_KEY,
                 APP_BASE_URL_DEFAULT
-            )!!, cookiePreferences
+            )!!, cookiePreferences,
+            false, this
         )
 
         if (savedInstanceState == null) {
@@ -251,4 +252,6 @@ class SettingsActivity : AppCompatActivity(),
         }
     }
 }
+
+
 

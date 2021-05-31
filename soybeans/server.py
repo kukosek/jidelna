@@ -1,19 +1,29 @@
+from Work.weekmenu import WeekMenu
+from Store.orderable_save_and_fill import orderable_save_and_complete
 import cherrypy
 import cherrypy_cors
 
 import threading
+import schedule
 
 from Automatic.dinner_ranker import DinnerRanker
 from Work.browser_work_distributor import BrowserWorkDistributor
 from Work.job import Job
 from Work.jobs import Jobs
 from Work.exceptions import *
-from Automatic.automatic_order import AutomaticOrderManager
-from Store.userStore.user_manager import UserManager
-from Store.userStore.user import User
-from Security.login_guard import LoginGuard
 
-import psycopg2
+from Automatic.automatic_order import AutomaticOrderManager
+
+from peewee import PostgresqlDatabase, OperationalError, InterfaceError
+from Store.get_db import get_db
+from Store.user import User
+from Store.saved_dinner import SavedDinner
+from Store.login_attempts import LoginAttempts
+from Store.review import Review, ReviewScore, review_from_dict, review_score_from_dict
+from Store.dinner_serving_dates import DinnerServingDates
+from Store.autoorder_cancel_dates import AutoorderCancelDate
+
+import Security.login_guard as login_guard
 
 from datetime import datetime
 
@@ -28,15 +38,36 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-import schedule
 
-from Store.DbHolder import DbHolder
+
+#RFC date for expiring cookies
+from wsgiref.handlers import format_date_time
+from datetime import datetime
+from time import mktime
+
+from peewee import DoesNotExist, PostgresqlDatabase
+
+from typing import List
+
+AUTHID_LENGTH = 128
 
 def CORS():
     cherrypy.response.headers["Access-Control-Allow-Credentials"] = "true"
 
 if __name__ == '__main__':
-    db_holder = DbHolder()
+    db: PostgresqlDatabase = get_db()
+    db.connect()
+
+    db.create_tables([
+        User,
+        LoginAttempts,
+        SavedDinner,
+        DinnerServingDates,
+        Review,
+        ReviewScore,
+        AutoorderCancelDate
+    ])
+
     try:
         num_of_workers = os.getenv('NUM_OF_WORKERS')
         if num_of_workers == None:
@@ -47,10 +78,31 @@ if __name__ == '__main__':
         print("No NUM_OF_WORKERS env variable, defaulting to 1.")
         num_of_workers = 1
     distributor = BrowserWorkDistributor(num_of_workers)
-    user_manager = UserManager(db_holder)
-    login_guard = LoginGuard(db_holder)
-    autoorder_manager = AutomaticOrderManager(distributor, user_manager)
-    schedule.every().day.at("06:19").do(autoorder_manager.do_automatic_orders)
+    db.close()
+
+def get_user_by_authid(authid: str, db: PostgresqlDatabase) -> User:
+    attempts = 0
+    user = None
+    while attempts <= 2 and user is None:
+        try:
+            user = User.get(User.authid == authid)
+        except DoesNotExist:
+            cherrypy.response.cookie["authid"] = authid
+            cherrypy.response.cookie["authid"]["expires"] = 0
+            raise cherrypy.HTTPError(status=401, message="Bad authid")
+        except (InterfaceError, OperationalError) as e:
+            print(str(e))
+            attempts+= 1
+            db.close()
+            db.connect()
+    if user is None:
+        print("Couldnt connect and find user in thread", threading.get_ident())
+        print('after', attempts, 'attempts')
+        exit(1)
+        raise cherrypy.HTTPError("DB connection error")
+    else:
+        print("Got user", user.name, "after", attempts, "attempts")
+        return user
 
 
 class JidelnaSuperstructureServer(object):
@@ -86,12 +138,6 @@ class JidelnaSuperstructureServer(object):
         else:
             login_guard.notify_login_success(self.get_request_origin_ip())
 
-    def user_validity_check(self, user, authid):
-        if user is None:
-            cherrypy.response.cookie["authid"] = authid
-            cherrypy.response.cookie["authid"]["expires"] = 0
-            raise cherrypy.HTTPError(status=401, message="Bad authid")
-
     def get_authid(self):
         try:
             return cherrypy.request.cookie["authid"].value
@@ -108,8 +154,7 @@ class JidelnaSuperstructureServer(object):
             if not login_guard.is_ip_malicious(self.get_request_origin_ip()):
                 if "authid" in cherrypy.request.cookie:
                     authid = self.get_authid()
-                    user = user_manager.get_user_by_authid(authid)
-                    self.user_validity_check(user, authid)
+                    user = get_user_by_authid(authid, db)
 
                     result = distributor.distribute(Job(Jobs.LOGIN, user))
                     if isinstance(result, Exception):
@@ -129,22 +174,34 @@ class JidelnaSuperstructureServer(object):
                 if "username" not in request_params or "password" not in request_params:
                     raise cherrypy.HTTPError(status=400,
                                              message="Bad request: you must specify username and password in request body as json")
-                user = User(None, request_params["username"], request_params["password"], None,
-                            None, None, None, None, None)
-                result = distributor.distribute(Job(Jobs.LOGIN, user))
-                self.login_exception_check(result)
+                user = User(
+                        username=request_params["username"],
+                        password=request_params["password"],
+                        authid="",
+                        autoorder_enable=False,
+                        autoorder_settings="{}",
+                        autoorder_request_settings="{}",
+                        register_datetime=datetime.now()
+                    )
+                user_name = distributor.distribute(Job(Jobs.LOGIN, user))
+                self.login_exception_check(user_name)
 
-                possibly_existing_user = user_manager.get_user_by_username(request_params["username"])
-                if possibly_existing_user is not None:
+                try:
+                    possibly_existing_user: User = User.get(User.username == request_params["username"])
                     user = possibly_existing_user
                     user.password = request_params["password"]
-                else:
-                    authid = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(128)])
+                except DoesNotExist:
+                    authid = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(AUTHID_LENGTH)])
                     user.authid = authid
+                    user.name = user_name
 
-                user_manager.add_or_update_user(user)
+                user.save()
 
-                cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure'
+                secure_cookie = False
+
+                cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)
+                if secure_cookie:
+                    cherrypy.response.headers['Set-Cookie'] += '; SameSite=None; Secure'
                 return "ok"
             else:
                 raise cherrypy.HTTPError(status=403, message="you messed up. contact me")
@@ -154,21 +211,23 @@ class JidelnaSuperstructureServer(object):
     @cherrypy.expose
     def logout(self, **params):
         authid = self.get_authid()
-        user = user_manager.get_user_by_authid(authid)
-        self.user_validity_check(user, authid)
-        cherrypy.response.cookie["authid"] = authid
-        cherrypy.response.cookie["authid"]["expires"] = 0
+        user = get_user_by_authid(authid, db)
+
+        now = datetime.now()
+        stamp = mktime(now.timetuple())
+        expires = format_date_time(stamp) #--> Wed, 22 Oct 2008 10:52:40 GMT
+
+        cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure; expires='+expires
         if "delete" in params:
             if params["delete"] == "true":
-                user_manager.delete_user(user)
+                user.delete_instance()
                 return "logged_out_and_deleted"
         return "logged_out"
 
     @cherrypy.expose
     def menu(self, **params):
         authid = self.get_authid()
-        user = user_manager.get_user_by_authid(authid)
-        self.user_validity_check(user, authid)
+        user : User = get_user_by_authid(authid, db)
 
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -180,49 +239,48 @@ class JidelnaSuperstructureServer(object):
                 except Exception:
                     raise cherrypy.HTTPError(status=400, message="Bad date format")
             if desired_date is None:
-                daymenus = distributor.distribute(Job(Jobs.GET_MENU, user))
+                weekmenu: WeekMenu = distributor.distribute(Job(Jobs.GET_MENU, user))
             else:
-                daymenus = distributor.distribute(Job(Jobs.GET_DAYMENU, user, desired_date))
-            if isinstance(daymenus, Exception):
-                self.login_exception_check(daymenus)
-                cherrypy.log.error("/menu unknown exception:" + str(daymenus))
+                weekmenu: WeekMenu = distributor.distribute(Job(Jobs.GET_DAYMENU, user, desired_date))
+            if isinstance(weekmenu, Exception):
+                self.login_exception_check(weekmenu)
+                cherrypy.log.error("/menu unknown exception:" + str(weekmenu))
                 raise cherrypy.HTTPError(status=500)
             else:
-                if user.autoorder_enable:
-                    def daymenu_correction(daymenu_to_correct):
+                for daymenu in weekmenu.daymenus:
+                    for menu in daymenu.menus:
+                        menu = orderable_save_and_complete(menu, daymenu.date)
+
+
+                    if user.autoorder_enable:
                         will_autoorder = True
-                        if user.autoorder_cancellation_dates is not None:
-                            if daymenu_to_correct.date in user.autoorder_cancellation_dates:
-                                will_autoorder = False
+                        try:
+                            AutoorderCancelDate.get(
+                                    AutoorderCancelDate.user==user,
+                                    AutoorderCancelDate.cancel_date==daymenu.date)
+                            will_autoorder = False
+                        except DoesNotExist:
+                            pass
                         unavailable_menus = 0
-                        for menu in daymenu_to_correct.menus:
+                        for menu in daymenu.menus:
                             if menu.status == "ordered" or menu.status == "ordering" or menu.status == "ordered closed":
                                 will_autoorder = False
                             elif menu.status == "unavailable":
                                 unavailable_menus += 1
-                        if len(daymenu_to_correct.menus) == unavailable_menus:
+                        if len(daymenu.menus) == unavailable_menus:
                             will_autoorder = False
                         if will_autoorder:
                             menu_num_to_order = DinnerRanker(
-                                user.autoorder_settings).get_best_dinner_number(
-                                daymenu_to_correct.menus)
-                            for menu in daymenu_to_correct.menus:
+                                json.loads(user.autoorder_settings)).get_best_dinner_number(
+                                daymenu.menus)
+                            for menu in daymenu.menus:
                                 if menu.menu_number == menu_num_to_order:
                                     menu.status = "autoordered"
 
-                    if isinstance(daymenus, list):
-                        for daymenu in daymenus:
-                            daymenu_correction(daymenu)
-                    else:
-                        daymenu_correction(daymenus)
-                if desired_date is None:
-                    daymenus_dict = daymenus
-                    for i in range(len(daymenus_dict)):
-                        daymenus_dict[i] = daymenus_dict[i].to_dict()
-                        daymenus_dict[i]["date"] = daymenus_dict[i]["date"].isoformat()
-                    return json.dumps(daymenus_dict).encode('utf8')
-                else:
-                    return daymenus.to_string().encode('utf8')
+
+
+
+                return weekmenu.to_string().encode('utf8')
         elif cherrypy.request.method == "POST":
             request_params = self.get_request_params()
             try:
@@ -232,15 +290,18 @@ class JidelnaSuperstructureServer(object):
                 if action == "order":
                     result = distributor.distribute(
                         Job(Jobs.ORDER_MENU, user, order_date, request_params["menuNumber"]))
-                    if order_date in user.autoorder_cancellation_dates:
-                        user.autoorder_cancellation_dates.remove(order_date)
-                        user_manager.add_or_update_user(user)
+                    try:
+                        cancel_date = AutoorderCancelDate.get(AutoorderCancelDate.user==user,AutoorderCancelDate.cancel_date==order_date)
+                        cancel_date.delete_instance()
+                    except DoesNotExist:
+                        pass
+
                 elif action == "cancel":
                     menus_cancel_day = distributor.distribute(Job(Jobs.GET_DAYMENU, user, order_date))
                     if isinstance(menus_cancel_day, Exception):
                         self.login_exception_check(menus_cancel_day)
                         raise cherrypy.HTTPError(status=500)
-                    menus_cancel_day = menus_cancel_day.menus
+                    menus_cancel_day = menus_cancel_day.daymenus[0].menus
                     something_is_ordered = False
                     for dinner in menus_cancel_day:
                         if dinner.status != "available" and dinner.status != "cancelling":
@@ -249,9 +310,12 @@ class JidelnaSuperstructureServer(object):
                         result = distributor.distribute(
                             Job(Jobs.CANCEL_ORDER, user, order_date, request_params["menuNumber"]))
                     else:
-                        if user.autoorder_enable and order_date not in user.autoorder_cancellation_dates:
-                            user.autoorder_cancellation_dates.append(order_date),
-                            user_manager.add_or_update_user(user)
+                        try:
+                            AutoorderCancelDate.get(AutoorderCancelDate.user == user, AutoorderCancelDate.cancel_date == order_date)
+                        except DoesNotExist:
+                            if user.autoorder_enable:
+                                cancel_date = AutoorderCancelDate(AutoorderCancelDate.user==user, AutoorderCancelDate.cancel_date==order_date)
+                                cancel_date.save()
                 if isinstance(result, Exception):
                     self.login_exception_check(result)
                     if isinstance(result, ValueError):
@@ -265,20 +329,22 @@ class JidelnaSuperstructureServer(object):
                             "/menu " + request_params["action"] + " request unknown exception:" + str(result))
                         raise cherrypy.HTTPError(status=500)
                 else:
-                    return "ok"
+                    return json.dumps({"creditLeft":result}).encode('utf8')
             except KeyError:
                 raise cherrypy.HTTPError(status=400)
 
     @cherrypy.expose
     def settings(self):
         authid = self.get_authid()
-        user = user_manager.get_user_by_authid(authid)
-        self.user_validity_check(user, authid)
+        user = get_user_by_authid(authid, db)
+
         if cherrypy.request.method == "GET":
             cherrypy.response.headers['Content-Type'] = 'application/json'
 
-            user_settings = {"autoorder": {"enable": user.autoorder_enable, "settings": user.autoorder_settings,
-                                           "requestSettings": user.autoorder_request_settings}}
+            user_settings = {"autoorder": {
+                "enable": user.autoorder_enable,
+                "settings": json.loads(user.autoorder_settings),
+                "requestSettings": json.loads(user.autoorder_request_settings)}}
             return json.dumps(user_settings).encode('utf8')
         elif cherrypy.request.method == "POST":
             settings = self.get_request_params()
@@ -286,9 +352,9 @@ class JidelnaSuperstructureServer(object):
                 for key, value in settings.items():
                     if key == "autoorder":
                         user.autoorder_enable = value["enable"]
-                        user.autoorder_settings = value["settings"]
-                        user.autoorder_request_settings = value["requestSettings"]
-                        user_manager.add_or_update_user(user)
+                        user.autoorder_settings = json.dumps(value["settings"])
+                        user.autoorder_request_settings = json.dumps(value["requestSettings"])
+                        user.save()
                     else:
                         raise cherrypy.HTTPError(status=400, message="Unknown setting: " + key)
                 return "ok"
@@ -297,15 +363,136 @@ class JidelnaSuperstructureServer(object):
             except ValueError as e:
                 cherrypy.HTTPError(status=400, message=str(e))
 
+    def check_id_list(self, id_list):
+        for rid in id_list:
+            try:
+                int(rid)
+            except ValueError:
+                raise cherrypy.HTTPError(400, "ID must be integer")
+
+
+
+    @cherrypy.expose
+    def reviews(self, **params):
+
+        authid = self.get_authid()
+        user : User = get_user_by_authid(authid, db)
+
+
+        def get_dinnerids():
+            try:
+                dinnerids = params["dinnerid"]
+                if not isinstance(dinnerids, list):
+                    dinnerids = [dinnerids]
+                self.check_id_list(dinnerids)
+                return dinnerids
+            except KeyError:
+                raise cherrypy.HTTPError(400, "You must specify dinnerid url param for submitting review")
+            except ValueError:
+                raise cherrypy.HTTPError(400, "Couldn't parse dinnerid URL param")
+
+
+        if cherrypy.request.method == "GET":
+
+            dinnerids = get_dinnerids()
+            self.check_id_list(dinnerids)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+
+            query = Review.select()
+            if "me" in params:
+                query = query.where(Review.dinner.in_(dinnerids), Review.user==user)
+            else:
+                query = query.where(Review.dinner.in_(dinnerids))
+
+            reviews = []
+            for review in query:
+                reviews.append(review.to_dict(user))
+
+            result_dict = {"reviews": reviews}
+            return json.dumps(result_dict).encode('utf-8')
+        elif cherrypy.request.method == "POST":
+
+            request_params = self.get_request_params()
+
+            if "score" in request_params:
+                try:
+                    reviewids = params["reviewid"]
+                    if not isinstance(reviewids, list):
+                        reviewids = [reviewids]
+                except KeyError:
+                    raise cherrypy.HTTPError(400, "You must specify dinnerid url param for submitting review")
+                except ValueError:
+                    raise cherrypy.HTTPError(400, "Couldn't parse dinnerid URL param")
+                review_score_from_dict(request_params["score"], user, reviewids[0])
+
+            if "review" in request_params:
+                dinnerids = get_dinnerids()
+
+                dinners = SavedDinner.select().where(SavedDinner.id.in_(dinnerids))
+
+
+                try:
+                    serving_date = DinnerServingDates.select().where(
+                            DinnerServingDates.dinner.in_(dinners)
+                            ).order_by(DinnerServingDates.serving_date.desc()).get()
+                except DoesNotExist:
+                    raise cherrypy.HTTPError(400, "This dinner hasn't been served")
+                weekmenu: WeekMenu = distributor.distribute(Job(Jobs.GET_DAYMENU, user, serving_date.serving_date))
+                if isinstance(weekmenu, Exception):
+                    self.login_exception_check(weekmenu)
+                    cherrypy.log.error("/review create unknown exception:" + str(weekmenu))
+                    raise cherrypy.HTTPError(status=500)
+                daymenu = weekmenu.daymenus[0]
+                ordered_dinnerid: int = -1
+                for menu in daymenu.menus:
+                    menu = orderable_save_and_complete(menu, daymenu.date)
+                    if menu.status == 'ordered' or menu.status == 'ordered closed' or menu.status == 'ordering':
+                        ordered_dinnerid = (menu.dinner_id)
+                if ordered_dinnerid == -1:
+                    raise cherrypy.HTTPError(400, "Please order the dinnner you want to rate")
+                elif not str(ordered_dinnerid) in dinnerids:
+                    raise cherrypy.HTTPError(400, "You have ordered an other dinner than the one you want to rate.")
+
+
+                try:
+                    saved_dinner = SavedDinner.get_by_id(ordered_dinnerid)
+                except DoesNotExist:
+                    raise cherrypy.HTTPError(400, "Dinner doesnt exist")
+
+                review = review_from_dict(request_params["review"],
+                        user,saved_dinner, datetime.today())
+
+                with open('Security/word_blacklist.txt', 'r') as f:
+                    word_blacklist = f.readlines()
+                for word in word_blacklist:
+                    if word.strip() in review.message:
+                        raise cherrypy.HTTPError(403, "Review contains forbidden word")
+
+                try:
+                    old_review: Review = Review.get(Review.user==user, Review.dinner==saved_dinner)
+                    old_review.rating = review.rating
+                    old_review.date_posted = datetime.today()
+                    old_review.score = 0
+                    old_review.message = review.message
+                    old_review.save()
+                except DoesNotExist:
+                    review.save()
+        return "ok".encode('utf-8')
+
+def _db_connect():
+    db.connect()
+
+def _db_close():
+    db.close()
+
+
 
 class RunScheduler:
     def __init__(self):
-        self.running = True
+        self.running = False
 
     def rs(self):
-        while self.running:
-            schedule.run_pending()
-            time.sleep(1)
+        pass
 
 
 run_scheduler = RunScheduler()
@@ -326,10 +513,8 @@ class ThreadController(cherrypy.process.plugins.SimplePlugin):
 
 if __name__ == '__main__':
     def finish():
-        if conn:
-            cur.close()
-            conn.close()
-            logging.info("PostgreSQL connection is closed")
+        _db_close()
+        logging.info("PostgreSQL connection is closed")
         try:
             distributor.close_all()  # test
         except Exception:
@@ -338,6 +523,7 @@ if __name__ == '__main__':
 
     thread_controller = ThreadController(cherrypy.engine)
     thread_controller.subscribe()
+
 
     config = {}
     try:
@@ -355,7 +541,8 @@ if __name__ == '__main__':
         cherrypy.config.update(config)
         cherrypy_cors.install()
         cherrypy.tools.CORS = cherrypy.Tool("before_finalize", CORS)
+        cherrypy.engine.subscribe('before_request', _db_connect)
+        cherrypy.engine.subscribe('after_request', _db_close)
         cherrypy.quickstart(JidelnaSuperstructureServer())
     except Exception:
         finish()
-    finish()

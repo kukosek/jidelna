@@ -240,12 +240,15 @@ class OnboardingActivity : AppCompatActivity() {
 
             val appPreferences = this.requireActivity().getSharedPreferences(APP_PREFS_NAME, Context.MODE_PRIVATE)
             cookiePreferences = this.requireActivity().getSharedPreferences(COOKIE_PREFS_NAME, Context.MODE_PRIVATE)
-            service = ServiceBuilder().build(
-                appPreferences.getString(
-                    APP_BASE_URL_KEY,
-                    APP_BASE_URL_DEFAULT
-                )!!, cookiePreferences
-            )
+            service = context?.let {
+                ServiceBuilder().build(
+                    appPreferences.getString(
+                        APP_BASE_URL_KEY,
+                        APP_BASE_URL_DEFAULT
+                    )!!, cookiePreferences,
+                    false, it
+                )
+            }!!
 
             val sectionText = rootView.findViewById<View>(R.id.section_label) as TextView
             sectionText.text =

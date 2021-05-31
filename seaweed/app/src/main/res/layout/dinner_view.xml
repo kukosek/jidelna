@@ -45,7 +45,7 @@
         android:paddingEnd="10dp">
 
         <TextView
-            android:id="@+id/dinnerName"
+            android:id="@+id/reviewInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/textColorSecondary" />

@@ -1,6 +1,7 @@
 from selenium import webdriver
 from Work import jidelna_webapp_handler
 from Work.daymenu import DayMenu
+from Work.weekmenu import WeekMenu
 from Work.jobs import Jobs
 from datetime import datetime
 from datetime import date
@@ -50,6 +51,7 @@ class Worker:
             try:
                 if job.type == Jobs.LOGIN:
                     login_for_job()
+                    job.result = self.handler.get_user_name()
                 elif job.type == Jobs.LOGOUT:
                     self.handler.logout()
                     self.loggedUser = None
@@ -57,19 +59,20 @@ class Worker:
                     last_request_elapsed_seconds = (datetime.now() - self.lastUsedTime).total_seconds()
                     if self.loggedUser is None or job.user.username != self.loggedUser.username or last_request_elapsed_seconds > 60.0:
                         login_for_job()
-                        print("loggin in")
                     if job.type == Jobs.SELECT_DATE:
                         self.handler.select_date(job.arguments[0])
                     elif job.type == Jobs.ORDER_MENU:
                         self.handler.select_date(job.arguments[0])
                         self.handler.order_menu(job.arguments[1])
+                        job.result = self.handler.get_credit()
                     elif job.type == Jobs.CANCEL_ORDER:
                         self.handler.select_date(job.arguments[0])
                         self.handler.cancel_order(job.arguments[1])
+                        job.result = self.handler.get_credit()
                     elif job.type == Jobs.GET_DAYMENU:
                         desired_date = job.arguments[0]
                         self.handler.select_date(desired_date)
-                        job.result = DayMenu(desired_date, self.handler.get_menu())
+                        job.result = WeekMenu([DayMenu(desired_date, self.handler.get_menu())], 0)
                     elif job.type == Jobs.GET_MENU:
                         daymenus = []
                         day_menu_available = True
@@ -90,7 +93,7 @@ class Worker:
                                 day_menu_not_available_times = 0
                                 daymenus.append(DayMenu(date_iter, daymenu))
                             date_iter += timedelta(days=1)
-                        job.result = daymenus
+                        job.result = WeekMenu(daymenus, self.handler.get_credit())
             except Exception as e:
                 job.result = e
                 cherrypy.log.error(traceback=True)
