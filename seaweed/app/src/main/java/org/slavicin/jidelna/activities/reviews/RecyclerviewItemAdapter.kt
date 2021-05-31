@@ -37,8 +37,6 @@ class ReviewItemAdapter internal constructor(
 ) :
     RecyclerView.Adapter<ReviewItemAdapter.MyViewHolder>() {
     private val itemsList: List<Review> = mItemList
-    private var callByHuman: Boolean = true
-    private var starInitialized: Boolean = false
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val layoutInflater: LayoutInflater= context.getSystemService(Activity.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val view: View =
@@ -47,21 +45,24 @@ class ReviewItemAdapter internal constructor(
     }
 
     fun onUserScoreChange(androidLikeButton: AndroidLikeButton, item: Review, like: Boolean, holder: MyViewHolder) {
+        val userScore = when(like) {
+            true -> 1.0
+            false -> 0.0
+        }
         val callAsync : Call<Void> = service.postReviewScore(item.id, PostReviewScoreParams(
-            ReviewScore(when(like) {
-                true -> 1.0
-                false -> 0.0
-            })
+            ReviewScore(userScore)
         ))
+        item.userScore = userScore
         if (like) {
             item.score += 1
         } else {
             item.score -= 1
         }
-        if (callByHuman) {
+        if (holder.callByHuman) {
+            holder.callByHuman = false
             notifyDataSetChanged()
         } else{
-            callByHuman = true
+            holder.callByHuman = true
         }
         callAsync.enqueue(object : Callback<Void?> {
             override fun onResponse(
@@ -112,10 +113,14 @@ class ReviewItemAdapter internal constructor(
         holder.likeButton.clipToOutline = true
         holder.score.text = item.score.toInt().toString()
 
-        if (item.userScore == 1.0 && !starInitialized) {
-            starInitialized = true
-            callByHuman = false
+        Log.i("reviews", item.userScore.toString())
+        if (item.userScore == 1.0 ) {
+            Log.i("reviews", "set currently liked")
+            holder.callByHuman = false
             holder.likeButton.setCurrentlyLiked(true)
+        } else{
+            holder.callByHuman = false
+            holder.likeButton.setCurrentlyLiked(false)
         }
 
 
@@ -149,6 +154,7 @@ class ReviewItemAdapter internal constructor(
     }
 
     inner class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        var callByHuman: Boolean = true
         var info: TextView = itemView.findViewById(R.id.reviewInfo)
         var message: TextView = itemView.findViewById(R.id.reviewMessage)
         var date: TextView = itemView.findViewById(R.id.reviewDate)
