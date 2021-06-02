@@ -220,6 +220,12 @@ class JidelnaSuperstructureServer(object):
         cherrypy.response.headers['Set-Cookie'] = 'authid='+str(user.authid)+'; SameSite=None; Secure; expires='+expires
         if "delete" in params:
             if params["delete"] == "true":
+
+                user_reviews = Review.select().where(Review.user==user)
+                for review in user_reviews:
+                    ReviewScore.delete().where(ReviewScore.review == review).execute()
+                ReviewScore.delete().where(ReviewScore.user == user).execute()
+                Review.delete().where(Review.user == user).execute()
                 user.delete_instance()
                 return "logged_out_and_deleted"
         return "logged_out"
